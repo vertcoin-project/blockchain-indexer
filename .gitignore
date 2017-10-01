@@ -1,0 +1,3 @@
+*.o
+vtc_indexer
+.vscode/
