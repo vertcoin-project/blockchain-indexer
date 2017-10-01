@@ -23,13 +23,13 @@
 
 #include <stdlib.h>
 #include <ck/ckmath.h>
-
+namespace VtcBlockIndexer {
 struct ScannedBlock {
     std::string fileName;
     int filePosition;
     int blockSize;
-    CryptoKernel::BigNum blockHash;
-    CryptoKernel::BigNum previousBlockHash; 
+    char *blockHash;
+    char *previousBlockHash; 
 };
-
+}
 #endif // BLOCKCHAINTYPES_H_INCLUDED

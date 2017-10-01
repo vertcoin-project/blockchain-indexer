@@ -18,6 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "blockscanner.h"
+#include "hashing.h"
 #include <string.h>
 
 const char magic[] = "\xfa\xbf\xb5\xda";
@@ -43,4 +44,23 @@ bool VtcBlockIndexer::BlockScanner::moveNext() {
     if(this->blockFileStream.eof() || this->blockFileStream.fail()) return false;
 
     return (memcmp(buffer, magic, 4) == 0);
+}
+
+VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
+    VtcBlockIndexer::ScannedBlock block;
+
+    uint32_t blockSize;
+    this->blockFileStream.read(reinterpret_cast<char *>(&blockSize), sizeof(blockSize));
+
+    block.fileName = this->blockFileName;
+    block.filePosition = this->blockFileStream.tellg();
+
+    char *blockHeader = new char[80];
+    this->blockFileStream.read(blockHeader, 80);
+
+    //block.blockHash = sha256(blockHeader)
+
+    this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
+    
+    return block;
 }

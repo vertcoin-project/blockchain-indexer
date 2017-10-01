@@ -21,13 +21,19 @@
 #include <iostream>
 #include <stdlib.h>
 #include "blockscanner.h"
+#include "blockchaintypes.h"
 
 int main(int argc, char* argv[]) {
     VtcBlockIndexer::BlockScanner* blockScanner = new VtcBlockIndexer::BlockScanner("/mnt/c/Users/Gert-Jaap/AppData/Roaming/Vertcoin/blocks/blk00000.dat");
     if(blockScanner->open())
     {
+        int i = 0;
         while(blockScanner->moveNext()) {
-            std::cout << "Found block\n";
+            i++;
+            if(i % 1000) {
+                std::cout << "\rFound " << i << " blocks";
+            }
+            VtcBlockIndexer::ScannedBlock block = blockScanner->scanNextBlock();
         }
         blockScanner->close();
     }
