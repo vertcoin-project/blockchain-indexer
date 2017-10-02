@@ -26,6 +26,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <memory>
 
 #include "blockscanner.h"
 #include "blockchaintypes.h"
@@ -35,7 +36,7 @@ int totalBlocks = 0;
 
 
 void scanBlocks(std::string fileName) {
-    VtcBlockIndexer::BlockScanner* blockScanner = new VtcBlockIndexer::BlockScanner(fileName);
+    std::unique_ptr<VtcBlockIndexer::BlockScanner> blockScanner(new VtcBlockIndexer::BlockScanner(fileName));
     if(blockScanner->open())
     {
         while(blockScanner->moveNext()) {

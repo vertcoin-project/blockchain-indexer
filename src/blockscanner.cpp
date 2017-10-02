@@ -20,6 +20,7 @@
 #include "blockscanner.h"
 #include "hashing.h"
 #include <string.h>
+#include <memory>
 
 const char magic[] = "\xfa\xbf\xb5\xda";
 
@@ -39,11 +40,11 @@ bool VtcBlockIndexer::BlockScanner::close() {
 }
 
 bool VtcBlockIndexer::BlockScanner::moveNext() {
-    char * buffer = new char[4];
-    this->blockFileStream.read(buffer, 4);
-    if(this->blockFileStream.eof() || this->blockFileStream.fail()) return false;
+    std::unique_ptr<char> buffer(new char[4]);
+    this->blockFileStream.read(buffer.get(), 4);
 
-    return (memcmp(buffer, magic, 4) == 0);
+    if(this->blockFileStream.eof() || this->blockFileStream.fail()) return false;
+    return (memcmp(buffer.get(), magic, 4) == 0);
 }
 
 VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
@@ -55,14 +56,15 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     block.fileName = this->blockFileName;
     block.filePosition = this->blockFileStream.tellg();
 
-    unsigned char *blockHeader = new unsigned char[80];
-    this->blockFileStream.read(reinterpret_cast<char*>( &blockHeader[0]) , 80);
+    std::unique_ptr<unsigned char> blockHeader(new unsigned char[80]);
+  
+    this->blockFileStream.read(reinterpret_cast<char*>( &blockHeader.get()[0]) , 80);
 
     block.blockHash = new unsigned char[32];
-    doubleSha256(blockHeader, block.blockHash);
+    doubleSha256(blockHeader.get(), block.blockHash);
 
     block.previousBlockHash = new unsigned char[32];
-    memcpy(block.previousBlockHash, blockHeader+4, 32);
+    memcpy(block.previousBlockHash, blockHeader.get()+4, 32);
 
     this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
     
