@@ -18,25 +18,62 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <unordered_map>
 #include <iostream>
 #include <stdlib.h>
+#include <sstream>
+#include <string>
+#include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include "blockscanner.h"
 #include "blockchaintypes.h"
 
-int main(int argc, char* argv[]) {
-    VtcBlockIndexer::BlockScanner* blockScanner = new VtcBlockIndexer::BlockScanner("/mnt/c/Users/Gert-Jaap/AppData/Roaming/Vertcoin/blocks/blk00000.dat");
+std::unordered_map<unsigned char *, VtcBlockIndexer::ScannedBlock> blocks;
+int totalBlocks = 0;
+
+
+void scanBlocks(std::string fileName) {
+    VtcBlockIndexer::BlockScanner* blockScanner = new VtcBlockIndexer::BlockScanner(fileName);
     if(blockScanner->open())
     {
-        int i = 0;
         while(blockScanner->moveNext()) {
-            i++;
-            if(i % 1000) {
-                std::cout << "\rFound " << i << " blocks";
+            totalBlocks++;
+            if(totalBlocks % 1000 == 0) {
+                std::cout << "\rFound " << totalBlocks << " blocks";
             }
             VtcBlockIndexer::ScannedBlock block = blockScanner->scanNextBlock();
+            blocks[block.previousBlockHash] = block;
         }
         blockScanner->close();
     }
+}
+
+int main(int argc, char* argv[]) {
+    std::cout << "Starting... \r\n";
+
+    DIR *dir;
+    dirent *ent;
+
+    std::cout << "Scanning directory [" << argv[1] << "] for blocks.\r\n";
+
+    dir = opendir(argv[1]);
+    while ((ent = readdir(dir)) != NULL) {
+        const std::string file_name = ent->d_name;
+
+        std::stringstream ss;
+        ss << argv[1] << "/" << file_name;
+        const std::string full_file_name = ss.str();
+
+        std::string prefix = "blk"; 
+        if(strncmp(file_name.c_str(), prefix.c_str(), prefix.size()) == 0)
+        {
+            scanBlocks(full_file_name);
+        }
+    }
+    closedir(dir);
+   
     
     
 }

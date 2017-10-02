@@ -55,10 +55,14 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     block.fileName = this->blockFileName;
     block.filePosition = this->blockFileStream.tellg();
 
-    char *blockHeader = new char[80];
-    this->blockFileStream.read(blockHeader, 80);
+    unsigned char *blockHeader = new unsigned char[80];
+    this->blockFileStream.read(reinterpret_cast<char*>( &blockHeader[0]) , 80);
 
-    //block.blockHash = sha256(blockHeader)
+    block.blockHash = new unsigned char[32];
+    doubleSha256(blockHeader, block.blockHash);
+
+    block.previousBlockHash = new unsigned char[32];
+    memcpy(block.previousBlockHash, blockHeader+4, 32);
 
     this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
     
