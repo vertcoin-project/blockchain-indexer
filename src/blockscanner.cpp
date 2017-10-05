@@ -59,6 +59,8 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     uint32_t blockSize;
     this->blockFileStream.read(reinterpret_cast<char *>(&blockSize), sizeof(blockSize));
 
+    // Store the file name and position of the block inside the struct so we can
+    // use that to read the actual block later after sorting the blockchain.
     block.fileName = this->blockFileName;
     block.filePosition = this->blockFileStream.tellg();
 

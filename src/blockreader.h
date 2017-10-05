@@ -18,46 +18,41 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCKCHAINTYPES_H_INCLUDED
-#define BLOCKCHAINTYPES_H_INCLUDED
 
-#include <stdlib.h>
-#include <vector>
-#include <ck/ckmath.h>
+#ifndef BLOCKREADER_H_INCLUDED
+#define BLOCKREADER_H_INCLUDED
+
+#include <iostream>
+#include <fstream>
+
+#include "blockchaintypes.h"
+
 namespace VtcBlockIndexer {
-struct ScannedBlock {
-    std::string fileName;
-    int filePosition;
-    uint32_t blockSize;
-    std::string blockHash;
-    std::string previousBlockHash; 
-};
-struct TransactionOutput {
-    int index;
-    std::string script;
-};
 
-struct TransactionInput {
-    std::string txHash;
-    int txoIndex;
-    int index;
-};
+/**
+ * The BlockReader class provides methods to read in the full details of 
+ * a block and its transactions from the block file based on a ScannedBlock 
+ */
 
-struct Transaction {
-    std::vector<TransactionInput> inputs;
-    std::vector<TransactionOutput> outputs;
-    std::string txHash;
-    int date;
-};
+class BlockReader {
+public:
+    /** Constructs a BlockReader instance using the given block data directory
+     * 
+     * @param blocksDir required Directory where the blockfiles are located.
+     */
+    BlockReader(const std::string blocksDir);
+     
+    /** Reads the entire contents of the block that was scanned
+     */
+    Block readBlock(ScannedBlock block);
 
-struct Block {
-    std::string blockHash;
-    std::string merkleRoot;
-    std::string previousBlockHash;
-    int time;
-    std::vector<Transaction> transactions;
-};
+private:
 
+    /** Directory containing the blocks
+     */
+    std::string blocksDir; 
+};
 
 }
-#endif // BLOCKCHAINTYPES_H_INCLUDED
+
+#endif // BLOCKREADER_H_INCLUDED

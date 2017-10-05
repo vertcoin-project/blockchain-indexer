@@ -31,7 +31,7 @@
 
 #include "blockscanner.h"
 #include "blockchaintypes.h"
-
+#include "blockreader.h"
 // This map will contain the blocks. The reason for using a vector as value
 // is that there can be multiple blocks having the same previousBlockHash in 
 // case there is a orphaned block in the block files.
@@ -39,6 +39,7 @@ std::unordered_map<std::string, std::vector<VtcBlockIndexer::ScannedBlock>> bloc
 int totalBlocks = 0;
 int blockHeight = 0;
 std::string blocksDir;
+VtcBlockIndexer::BlockReader blockReader("");
 
 /** Uses the blockscanner to scan blocks within a file and add them to the
  * unordered map.
@@ -101,8 +102,47 @@ void scanBlockFiles(char* dirPath) {
     closedir(dir);
 }
 
-/** Processes the next block in line (by matching the prevBlockHash which is the
- * key in the unordered_map). Return the hash of the block that was processed.
+VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks) {
+    std::vector<std::string> nextBlockHashes;
+    for(uint i = 0; i < matchingBlocks.size(); i++) {
+        nextBlockHashes.push_back(matchingBlocks.at(i).blockHash);
+    }
+
+    while(true) {
+       
+        for(uint i = 0; i < nextBlockHashes.size(); i++) {
+            int countChains = 0;
+            for(uint i = 0; i < nextBlockHashes.size(); i++) {
+                if(nextBlockHashes.at(i) != "") {
+                    countChains++;
+                } 
+            }
+    
+            if(countChains == 1) {
+                for(uint i = 0; i < nextBlockHashes.size(); i++) {
+                    if(nextBlockHashes.at(i) != "") {
+                        return matchingBlocks.at(i);
+                    } 
+                }
+            }
+
+            if(blocks.find(nextBlockHashes.at(i)) == blocks.end()) {
+                nextBlockHashes.at(i).assign("");
+            } else {
+                std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[nextBlockHashes.at(i)];
+                VtcBlockIndexer::ScannedBlock bestBlock = matchingBlocks.at(0);
+                if(matchingBlocks.size() > 1) { 
+                    bestBlock = findLongestChain(matchingBlocks);
+                }
+                nextBlockHashes.at(i).assign(bestBlock.blockHash);
+            }
+        }
+    }
+}
+
+/** Finds the next block in line (by matching the prevBlockHash which is the
+ * key in the unordered_map). Then uses the block processor to do the indexing.
+ * Returns the hash of the block that was processed.
  * 
  * @param prevBlockHash the hex hash of the block that was last processed that we should
  * extend the chain onto.
@@ -118,14 +158,16 @@ std::string processNextBlock(std::string prevBlockHash) {
     std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
 
     if(matchingBlocks.size() > 0) {
+        VtcBlockIndexer::ScannedBlock bestBlock = matchingBlocks.at(0);
         if(matchingBlocks.size() > 1) { 
-            // TODO: Multiple matching blocks found. Need to idenfity the longest chain. 
-            // for now: stopping.
-            std::cout << "Found multiple potential blocks, finding longest chain...\r\n";
-            return "";
+            bestBlock = findLongestChain(matchingBlocks);
         } 
 
-        return matchingBlocks.at(0).blockHash;
+        VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock);
+        
+        std::cout << "Block at height" << blockHeight << " read. Merkle root: " << fullBlock.merkleRoot << "\r\n";
+
+        return bestBlock.blockHash;
 
     } else {
         // Somehow found an empty vector in the unordered_map. This should not happen. 
@@ -133,6 +175,9 @@ std::string processNextBlock(std::string prevBlockHash) {
         return "";
     }
 }
+
+
+
 
 int main(int argc, char* argv[]) {
     // If user did not supply the command line parameter, show the usage and exit.
@@ -142,7 +187,7 @@ int main(int argc, char* argv[]) {
     }
     
     blocksDir.assign(argv[1]);
-
+    blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     std::cout << "Scanning blocks... \r\n";
 
     scanBlockFiles(argv[1]);
@@ -161,5 +206,5 @@ int main(int argc, char* argv[]) {
         processedBlock = processNextBlock(nextBlock);
     }
 
-    std::cout << "Done. Have a nice day.\r\n";
+    std::cout << "Done. Processed " << blockHeight << " blocks. Have a nice day.\r\n";
 }
