@@ -39,9 +39,10 @@ class BlockScanner {
 public:
     /** Constructs a BlockScanner instance using the given block data file
      * 
+     * @param blocksDir required Directory where the blockfile is located.
      * @param blockFileName required Filename of the block file to read.
      */
-    BlockScanner(const std::string blockFileName);
+    BlockScanner(const std::string blocksDir, const std::string blockFileName);
      
     /** Opens the file for reading and allows scanning for blocks
      */
@@ -69,9 +70,18 @@ public:
 
 private:
 
+    /** Reference to the stream when the blockfile was opened
+     */
     std::ifstream blockFileStream;
+    
+    /** Full path to the blockfile
+     */
+    std::string blockFilePath;
+    
+    /** File name only of the blockfile
+     */
     std::string blockFileName;
-
+    
 };
 
 }

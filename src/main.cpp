@@ -27,54 +27,139 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <memory>
+#include <vector>
 
 #include "blockscanner.h"
 #include "blockchaintypes.h"
 
-std::unordered_map<unsigned char *, VtcBlockIndexer::ScannedBlock> blocks;
+// This map will contain the blocks. The reason for using a vector as value
+// is that there can be multiple blocks having the same previousBlockHash in 
+// case there is a orphaned block in the block files.
+std::unordered_map<std::string, std::vector<VtcBlockIndexer::ScannedBlock>> blocks;
 int totalBlocks = 0;
+int blockHeight = 0;
+std::string blocksDir;
 
-
+/** Uses the blockscanner to scan blocks within a file and add them to the
+ * unordered map.
+ * 
+ * @param fileName The file name of the BLK????.DAT to scan for blocks.
+ */
 void scanBlocks(std::string fileName) {
-    std::unique_ptr<VtcBlockIndexer::BlockScanner> blockScanner(new VtcBlockIndexer::BlockScanner(fileName));
+    std::unique_ptr<VtcBlockIndexer::BlockScanner> blockScanner(new VtcBlockIndexer::BlockScanner(blocksDir, fileName));
     if(blockScanner->open())
     {
         while(blockScanner->moveNext()) {
             totalBlocks++;
-            if(totalBlocks % 1000 == 0) {
-                std::cout << "\rFound " << totalBlocks << " blocks";
-            }
             VtcBlockIndexer::ScannedBlock block = blockScanner->scanNextBlock();
-            blocks[block.previousBlockHash] = block;
+
+            // Create an empty vector inside the unordered map if this previousBlockHash
+            // was not found before.
+            if(blocks.find(block.previousBlockHash) == blocks.end()) {
+                blocks[block.previousBlockHash] = {};
+            }
+
+            // Check if a block with the same hash already exists. Unfortunately, I found
+            // instances where a block is included in the block files more than once.
+            std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[block.previousBlockHash];
+            bool blockFound = false;
+            for(VtcBlockIndexer::ScannedBlock matchingBlock : matchingBlocks) {
+                if(matchingBlock.blockHash == block.blockHash) {
+                    blockFound = true;
+                }
+            }
+
+            // If the block is not present, add it to the vector.
+            if(!blockFound) {
+                blocks[block.previousBlockHash].push_back(block);
+            }
         }
         blockScanner->close();
     }
 }
 
-int main(int argc, char* argv[]) {
-    std::cout << "Starting... \r\n";
-
+/** Scans a folder for block files present and passes them to the scanBlocks
+ * method
+ * 
+ * @param dirPath The directory to scan for blockfiles.
+ */
+void scanBlockFiles(char* dirPath) {
     DIR *dir;
     dirent *ent;
 
-    std::cout << "Scanning directory [" << argv[1] << "] for blocks.\r\n";
-
-    dir = opendir(argv[1]);
+    dir = opendir(dirPath);
     while ((ent = readdir(dir)) != NULL) {
         const std::string file_name = ent->d_name;
 
-        std::stringstream ss;
-        ss << argv[1] << "/" << file_name;
-        const std::string full_file_name = ss.str();
-
+        // Check if the filename starts with "blk"
         std::string prefix = "blk"; 
         if(strncmp(file_name.c_str(), prefix.c_str(), prefix.size()) == 0)
         {
-            scanBlocks(full_file_name);
+            scanBlocks(file_name);
         }
     }
     closedir(dir);
-   
+}
+
+/** Processes the next block in line (by matching the prevBlockHash which is the
+ * key in the unordered_map). Return the hash of the block that was processed.
+ * 
+ * @param prevBlockHash the hex hash of the block that was last processed that we should
+ * extend the chain onto.
+ */
+std::string processNextBlock(std::string prevBlockHash) {
+    // If there is no block present with this hash as previousBlockHash, return an empty 
+    // string signaling we're at the end of the chain.
+    if(blocks.find(prevBlockHash) == blocks.end()) {
+        return "";
+    }
+
+    // Find the blocks that match
+    std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
+
+    if(matchingBlocks.size() > 0) {
+        if(matchingBlocks.size() > 1) { 
+            // TODO: Multiple matching blocks found. Need to idenfity the longest chain. 
+            // for now: stopping.
+            std::cout << "Found multiple potential blocks, finding longest chain...\r\n";
+            return "";
+        } 
+
+        return matchingBlocks.at(0).blockHash;
+
+    } else {
+        // Somehow found an empty vector in the unordered_map. This should not happen. 
+        // But just in case, returning an empty value here.
+        return "";
+    }
+}
+
+int main(int argc, char* argv[]) {
+    // If user did not supply the command line parameter, show the usage and exit.
+    if(argc < 2) {
+        std::cerr << "Usage: vtc_indexer [blocks_dir]\r\n";
+        exit(0);
+    }
     
+    blocksDir.assign(argv[1]);
+
+    std::cout << "Scanning blocks... \r\n";
+
+    scanBlockFiles(argv[1]);
     
+    std::cout << "Found " << totalBlocks << " blocks. Constructing longest chain...\n";
+
+    // The blockchain starts with the genesis block that has a zero hash as Previous Block Hash
+    std::string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
+    std::string processedBlock = processNextBlock(nextBlock);
+    while(processedBlock != "") {
+        if(blockHeight % 100000 == 0) {
+            std::cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << "\r\n";    
+        }
+        blockHeight++;
+        nextBlock = processedBlock;
+        processedBlock = processNextBlock(nextBlock);
+    }
+
+    std::cout << "Done. Have a nice day.\r\n";
 }

@@ -28,8 +28,8 @@ struct ScannedBlock {
     std::string fileName;
     int filePosition;
     int blockSize;
-    unsigned char *blockHash;
-    unsigned char *previousBlockHash; 
+    std::string blockHash;
+    std::string previousBlockHash; 
 };
 }
 #endif // BLOCKCHAINTYPES_H_INCLUDED
