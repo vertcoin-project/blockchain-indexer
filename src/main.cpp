@@ -30,24 +30,28 @@
 #include <vector>
 
 #include "blockscanner.h"
+#include "blockindexer.h"
 #include "blockchaintypes.h"
 #include "blockreader.h"
+
+using namespace std;
+
 // This map will contain the blocks. The reason for using a vector as value
 // is that there can be multiple blocks having the same previousBlockHash in 
 // case there is a orphaned block in the block files.
-std::unordered_map<std::string, std::vector<VtcBlockIndexer::ScannedBlock>> blocks;
+unordered_map<string, vector<VtcBlockIndexer::ScannedBlock>> blocks;
 int totalBlocks = 0;
 int blockHeight = 0;
-std::string blocksDir;
+string blocksDir;
 VtcBlockIndexer::BlockReader blockReader("");
-
+VtcBlockIndexer::BlockIndexer blockIndexer;
 /** Uses the blockscanner to scan blocks within a file and add them to the
  * unordered map.
  * 
  * @param fileName The file name of the BLK????.DAT to scan for blocks.
  */
-void scanBlocks(std::string fileName) {
-    std::unique_ptr<VtcBlockIndexer::BlockScanner> blockScanner(new VtcBlockIndexer::BlockScanner(blocksDir, fileName));
+void scanBlocks(string fileName) {
+    unique_ptr<VtcBlockIndexer::BlockScanner> blockScanner(new VtcBlockIndexer::BlockScanner(blocksDir, fileName));
     if(blockScanner->open())
     {
         while(blockScanner->moveNext()) {
@@ -62,7 +66,7 @@ void scanBlocks(std::string fileName) {
 
             // Check if a block with the same hash already exists. Unfortunately, I found
             // instances where a block is included in the block files more than once.
-            std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[block.previousBlockHash];
+            vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[block.previousBlockHash];
             bool blockFound = false;
             for(VtcBlockIndexer::ScannedBlock matchingBlock : matchingBlocks) {
                 if(matchingBlock.blockHash == block.blockHash) {
@@ -90,10 +94,10 @@ void scanBlockFiles(char* dirPath) {
 
     dir = opendir(dirPath);
     while ((ent = readdir(dir)) != NULL) {
-        const std::string file_name = ent->d_name;
+        const string file_name = ent->d_name;
 
         // Check if the filename starts with "blk"
-        std::string prefix = "blk"; 
+        string prefix = "blk"; 
         if(strncmp(file_name.c_str(), prefix.c_str(), prefix.size()) == 0)
         {
             scanBlocks(file_name);
@@ -102,8 +106,8 @@ void scanBlockFiles(char* dirPath) {
     closedir(dir);
 }
 
-VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks) {
-    std::vector<std::string> nextBlockHashes;
+VtcBlockIndexer::ScannedBlock findLongestChain(vector<VtcBlockIndexer::ScannedBlock> matchingBlocks) {
+    vector<string> nextBlockHashes;
     for(uint i = 0; i < matchingBlocks.size(); i++) {
         nextBlockHashes.push_back(matchingBlocks.at(i).blockHash);
     }
@@ -129,7 +133,7 @@ VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::Scan
             if(blocks.find(nextBlockHashes.at(i)) == blocks.end()) {
                 nextBlockHashes.at(i).assign("");
             } else {
-                std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[nextBlockHashes.at(i)];
+                vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[nextBlockHashes.at(i)];
                 VtcBlockIndexer::ScannedBlock bestBlock = matchingBlocks.at(0);
                 if(matchingBlocks.size() > 1) { 
                     bestBlock = findLongestChain(matchingBlocks);
@@ -147,7 +151,7 @@ VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::Scan
  * @param prevBlockHash the hex hash of the block that was last processed that we should
  * extend the chain onto.
  */
-std::string processNextBlock(std::string prevBlockHash) {
+string processNextBlock(string prevBlockHash) {
     // If there is no block present with this hash as previousBlockHash, return an empty 
     // string signaling we're at the end of the chain.
     if(blocks.find(prevBlockHash) == blocks.end()) {
@@ -155,7 +159,7 @@ std::string processNextBlock(std::string prevBlockHash) {
     }
 
     // Find the blocks that match
-    std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
+    vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
 
     if(matchingBlocks.size() > 0) {
         VtcBlockIndexer::ScannedBlock bestBlock = matchingBlocks.at(0);
@@ -163,10 +167,8 @@ std::string processNextBlock(std::string prevBlockHash) {
             bestBlock = findLongestChain(matchingBlocks);
         } 
 
-        VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock);
-        if(blockHeight % 2500 == 0) {
-            std::cout << "Block at height" << blockHeight << " read. Merkle root: " << fullBlock.merkleRoot << "\r\n";
-        }
+        VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock, blockHeight);
+        blockIndexer.indexBlock(fullBlock);
         return bestBlock.blockHash;
 
     } else {
@@ -182,29 +184,33 @@ std::string processNextBlock(std::string prevBlockHash) {
 int main(int argc, char* argv[]) {
     // If user did not supply the command line parameter, show the usage and exit.
     if(argc < 2) {
-        std::cerr << "Usage: vtc_indexer [blocks_dir]\r\n";
+        cerr << "Usage: vtc_indexer [blocks_dir]" << endl;
         exit(0);
     }
     
     blocksDir.assign(argv[1]);
     blockReader = VtcBlockIndexer::BlockReader(blocksDir);
-    std::cout << "Scanning blocks... \r\n";
+    cout << "Opening LevelDB..." << endl;
+    blockIndexer.open();
+    
+    cout << "Scanning blocks..." << endl;
 
     scanBlockFiles(argv[1]);
     
-    std::cout << "Found " << totalBlocks << " blocks. Constructing longest chain...\n";
+    cout << "Found " << totalBlocks << " blocks. Constructing longest chain..." << endl;
 
     // The blockchain starts with the genesis block that has a zero hash as Previous Block Hash
-    std::string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
-    std::string processedBlock = processNextBlock(nextBlock);
+    string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
+    string processedBlock = processNextBlock(nextBlock);
     while(processedBlock != "") {
         if(blockHeight % 100000 == 0) {
-            std::cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << "\r\n";    
+            cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << endl;    
         }
         blockHeight++;
         nextBlock = processedBlock;
         processedBlock = processNextBlock(nextBlock);
     }
 
-    std::cout << "Done. Processed " << blockHeight << " blocks. Have a nice day.\r\n";
+    blockIndexer.close();
+    cout << "Done. Processed " << blockHeight << " blocks. Have a nice day." << endl;
 }

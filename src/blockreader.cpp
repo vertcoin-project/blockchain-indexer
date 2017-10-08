@@ -29,40 +29,43 @@
 #include <iostream>
 #include <fstream>
 
-VtcBlockIndexer::BlockReader::BlockReader(const std::string blocksDir) {
+using namespace std;
+
+VtcBlockIndexer::BlockReader::BlockReader(const string blocksDir) {
     
     this->blocksDir = blocksDir;
 }
 
-VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock block) {
+VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock block, uint64_t blockHeight) {
     VtcBlockIndexer::Block fullBlock;
 
+    fullBlock.height = blockHeight;
     fullBlock.previousBlockHash = block.previousBlockHash;
     fullBlock.blockHash = block.blockHash;
     
-    std::stringstream ss;
+    stringstream ss;
     ss << blocksDir << "/" << block.fileName;
-    std::ifstream blockFile(ss.str(), std::ios_base::in | std::ios_base::binary);
+    ifstream blockFile(ss.str(), ios_base::in | ios_base::binary);
     
     if(!blockFile.is_open()) {
-        std::cerr << "Block file could not be opened";
+        cerr << "Block file could not be opened";
         exit(0);
     }
 
     // Seek to the start of the merkle root (we didn't read that while scanning)
-    blockFile.seekg(block.filePosition+36, std::ios_base::beg);
-    std::unique_ptr<unsigned char> merkleRoot(new unsigned char[32]);
+    blockFile.seekg(block.filePosition+36, ios_base::beg);
+    unique_ptr<unsigned char> merkleRoot(new unsigned char[32]);
     blockFile.read(reinterpret_cast<char *>(&merkleRoot.get()[0]) , 32);
 
-    std::stringstream ssMR;
+    stringstream ssMR;
     for(int i = 0; i < 32; i++)
     {
-        ssMR << std::hex << std::setw(2) << std::setfill('0') << (int)merkleRoot.get()[i];
+        ssMR << hex << setw(2) << setfill('0') << (int)merkleRoot.get()[i];
     }
     fullBlock.merkleRoot = ssMR.str();
 
     // Find number of transactions
-    blockFile.seekg(block.filePosition+80, std::ios_base::beg);
+    blockFile.seekg(block.filePosition+80, ios_base::beg);
     uint64_t txCount = readVarInt(blockFile);
     
     fullBlock.transactions = {};

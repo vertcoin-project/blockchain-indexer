@@ -29,7 +29,7 @@ endif
 
 PLATFORMCXXFLAGS += -g -Wall -std=c++14 -O2 -Wl,-E 
 
-INDEXERSRC = src/main.cpp src/blockscanner.cpp src/hashing.cpp src/blockreader.cpp src/filereading.cpp
+INDEXERSRC = src/main.cpp src/blockscanner.cpp src/hashing.cpp src/blockreader.cpp src/filereading.cpp src/blockindexer.cpp
 INDEXEROBJS = $(INDEXERSRC:.cpp=.cpp.o)
 
 INDEXERLDFLAGS = $(BINFLAGS) -lck -llua5.3 -lcrypto -ldl -pthread -lleveldb -lmicrohttpd -ljsonrpccpp-common -ljsonrpccpp-server -lcurl -ljsonrpccpp-client -ljsoncpp -lsfml-system -lsfml-network

@@ -24,42 +24,45 @@
 #include <stdlib.h>
 #include <vector>
 #include <ck/ckmath.h>
+using namespace std;
+
 namespace VtcBlockIndexer {
 struct ScannedBlock {
-    std::string fileName;
+    string fileName;
     int filePosition;
     uint32_t blockSize;
-    std::string blockHash;
-    std::string previousBlockHash; 
+    string blockHash;
+    string previousBlockHash; 
 };
 struct TransactionOutput {
     uint64_t value;
-    std::string script;
+    string script;
     uint32_t index;
 };
 
 struct TransactionInput {
     uint32_t index;
-    std::string txHash;
+    string txHash;
     uint32_t txoIndex;
     uint32_t sequence;
-    std::string script;
+    string script;
 };
 
 struct Transaction {
-    std::vector<TransactionInput> inputs;
-    std::vector<TransactionOutput> outputs;
-    std::string txHash;
+    vector<TransactionInput> inputs;
+    vector<TransactionOutput> outputs;
+    string txHash;
     uint32_t version;
     uint32_t lockTime;
 };
 
 struct Block {
-    std::string blockHash;
-    std::string merkleRoot;
-    std::string previousBlockHash;
+    string blockHash;
+    string merkleRoot;
+    string previousBlockHash;
     int time;
-    std::vector<Transaction> transactions;
+    uint64_t height;
+    vector<Transaction> transactions;
 };
 
 

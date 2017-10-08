@@ -17,42 +17,39 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-#ifndef BLOCKREADER_H_INCLUDED
-#define BLOCKREADER_H_INCLUDED
-
-#include <iostream>
-#include <fstream>
-
+#include "blockindexer.h"
 #include "blockchaintypes.h"
+#include <iostream>
+#include <sstream>
+#include "leveldb/db.h"
 
-namespace VtcBlockIndexer {
+using namespace std;
 
-/**
- * The BlockReader class provides methods to read in the full details of 
- * a block and its transactions from the block file based on a ScannedBlock 
- */
+leveldb::DB* db;
 
-class BlockReader {
-public:
-    /** Constructs a BlockReader instance using the given block data directory
-     * 
-     * @param blocksDir required Directory where the blockfiles are located.
-     */
-    BlockReader(const std::string blocksDir);
-     
-    /** Reads the entire contents of the block that was scanned
-     */
-    Block readBlock(ScannedBlock block, uint64_t height);
-
-private:
-
-    /** Directory containing the blocks
-     */
-    std::string blocksDir; 
-};
-
+VtcBlockIndexer::BlockIndexer::BlockIndexer() {
+    
 }
 
-#endif // BLOCKREADER_H_INCLUDED
+bool VtcBlockIndexer::BlockIndexer::open() {
+    leveldb::Options options;
+    options.create_if_missing = true;
+    leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
+    if(!status.ok()) {
+        cerr << status.ToString() << endl;
+    }
+    return status.ok();
+}
+
+bool VtcBlockIndexer::BlockIndexer::close() {
+    delete db;
+    return true;
+}
+
+bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
+    stringstream ss;
+    ss << "block-" << block.height;
+    db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
+    return true;
+}
+  

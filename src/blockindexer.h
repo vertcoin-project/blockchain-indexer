@@ -19,8 +19,8 @@
 */
 
 
-#ifndef BLOCKREADER_H_INCLUDED
-#define BLOCKREADER_H_INCLUDED
+#ifndef BLOCKINDEXER_H_INCLUDED
+#define BLOCKINDEXER_H_INCLUDED
 
 #include <iostream>
 #include <fstream>
@@ -30,29 +30,32 @@
 namespace VtcBlockIndexer {
 
 /**
- * The BlockReader class provides methods to read in the full details of 
- * a block and its transactions from the block file based on a ScannedBlock 
+ * The BlockIndexer class provides methods to index a block that was fully 
+ * read (so including its transactions). It will index the necessary elements
+ * to be able to query balances per address, blocks by hash and index, and 
+ * data to handle reorgs.
  */
 
-class BlockReader {
+class BlockIndexer {
 public:
-    /** Constructs a BlockReader instance using the given block data directory
-     * 
-     * @param blocksDir required Directory where the blockfiles are located.
+    /** Constructs a BlockIndexer instance using the given block data directory
      */
-    BlockReader(const std::string blocksDir);
-     
-    /** Reads the entire contents of the block that was scanned
-     */
-    Block readBlock(ScannedBlock block, uint64_t height);
+    BlockIndexer();
 
-private:
-
-    /** Directory containing the blocks
+    /** Open the LevelDB database
      */
-    std::string blocksDir; 
+    bool open();
+
+    /** Closes the LevelDB database
+     */
+    bool close();
+
+    /** Indexes the contents of the block
+     */
+    bool indexBlock(Block block);
+
 };
 
 }
 
-#endif // BLOCKREADER_H_INCLUDED
+#endif // BLOCKINDEXER_H_INCLUDED
