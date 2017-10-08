@@ -33,21 +33,25 @@ struct ScannedBlock {
     std::string previousBlockHash; 
 };
 struct TransactionOutput {
-    int index;
+    uint64_t value;
     std::string script;
+    uint32_t index;
 };
 
 struct TransactionInput {
+    uint32_t index;
     std::string txHash;
-    int txoIndex;
-    int index;
+    uint32_t txoIndex;
+    uint32_t sequence;
+    std::string script;
 };
 
 struct Transaction {
     std::vector<TransactionInput> inputs;
     std::vector<TransactionOutput> outputs;
     std::string txHash;
-    int date;
+    uint32_t version;
+    uint32_t lockTime;
 };
 
 struct Block {

@@ -164,9 +164,9 @@ std::string processNextBlock(std::string prevBlockHash) {
         } 
 
         VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock);
-        
-        std::cout << "Block at height" << blockHeight << " read. Merkle root: " << fullBlock.merkleRoot << "\r\n";
-
+        if(blockHeight % 2500 == 0) {
+            std::cout << "Block at height" << blockHeight << " read. Merkle root: " << fullBlock.merkleRoot << "\r\n";
+        }
         return bestBlock.blockHash;
 
     } else {

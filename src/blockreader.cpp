@@ -18,6 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "blockreader.h"
+#include "filereading.h"
 #include "blockchaintypes.h"
 #include "hashing.h"
 #include <string.h>
@@ -59,6 +60,43 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         ssMR << std::hex << std::setw(2) << std::setfill('0') << (int)merkleRoot.get()[i];
     }
     fullBlock.merkleRoot = ssMR.str();
+
+    // Find number of transactions
+    blockFile.seekg(block.filePosition+80, std::ios_base::beg);
+    uint64_t txCount = readVarInt(blockFile);
+    
+    fullBlock.transactions = {};
+
+    for(uint64_t tx = 0; tx < txCount; tx++) {
+        VtcBlockIndexer::Transaction transaction;
+        blockFile.read(reinterpret_cast<char *>(&transaction.version), sizeof(transaction.version));
+
+        transaction.inputs = {};
+
+        uint64_t inputCount = readVarInt(blockFile);
+
+        for(uint64_t input = 0; input < inputCount; input++) {
+            VtcBlockIndexer::TransactionInput txInput;
+            txInput.txHash = readHash(blockFile);
+            blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
+            txInput.script = readString(blockFile);
+            blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
+            txInput.index = input;
+            transaction.inputs.push_back(txInput);
+        }
+        
+        uint64_t outputCount = readVarInt(blockFile);
+        transaction.outputs = {};
+        for(uint64_t output = 0; output < outputCount; output++) {
+            VtcBlockIndexer::TransactionOutput txOutput;
+            blockFile.read(reinterpret_cast<char *>(&txOutput.value), sizeof(txOutput.value));
+            txOutput.script = readString(blockFile);
+            txOutput.index = output;
+            transaction.outputs.push_back(txOutput);
+        }
+        
+        blockFile.read(reinterpret_cast<char *>(&transaction.lockTime), sizeof(transaction.lockTime));
+    }
     
     blockFile.close();
     return fullBlock;
