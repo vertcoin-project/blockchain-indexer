@@ -46,6 +46,7 @@ struct TransactionInput {
     uint32_t txoIndex;
     uint32_t sequence;
     string script;
+    vector<string> witnessData;
 };
 
 struct Transaction {

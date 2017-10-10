@@ -71,13 +71,25 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
     fullBlock.transactions = {};
 
     for(uint64_t tx = 0; tx < txCount; tx++) {
+        bool segwit = false;
+
         VtcBlockIndexer::Transaction transaction;
         blockFile.read(reinterpret_cast<char *>(&transaction.version), sizeof(transaction.version));
 
+        // determine if this is a segwit tx
+        // https://bitcoincore.org/en/segwit_wallet_dev/
+        unique_ptr<unsigned char> segwitMarker(new unsigned char[2]);
+        blockFile.read(reinterpret_cast<char *>(&segwitMarker.get()[0]) , 2);
+        segwit = (segwitMarker.get()[0] == 0x00 && segwitMarker.get()[1] != 0x00);
+        
+        // If the segwit marker is not found, the number of inputs is located in its place
+        // so rewind the stream to continue.
+        if(!segwit) blockFile.seekg(-2, ios_base::cur);
+        
         transaction.inputs = {};
 
         uint64_t inputCount = readVarInt(blockFile);
-
+        
         for(uint64_t input = 0; input < inputCount; input++) {
             VtcBlockIndexer::TransactionInput txInput;
             txInput.txHash = readHash(blockFile);
@@ -97,7 +109,20 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
             txOutput.index = output;
             transaction.outputs.push_back(txOutput);
         }
-        
+
+        if(segwit) {
+            for(uint64_t input = 0; input < inputCount; input++) {
+                uint64_t witnessItems = readVarInt(blockFile);
+                if(witnessItems > 0) {
+                    transaction.inputs.at(input).witnessData = {};
+                    for(uint64_t witnessItem = 0; witnessItem < witnessItems; witnessItem++) {
+                        string witnessData = readString(blockFile);
+                        transaction.inputs.at(input).witnessData.push_back(witnessData);
+                    }
+                }
+            }
+        }
+
         blockFile.read(reinterpret_cast<char *>(&transaction.lockTime), sizeof(transaction.lockTime));
     }
     

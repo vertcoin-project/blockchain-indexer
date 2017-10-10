@@ -72,10 +72,14 @@ std::string readHash(std::ifstream& stream) {
 
 std::string readString(std::ifstream& stream) {
     uint64_t length = readVarInt(stream);
-    std::unique_ptr<char> data(new char[length]);
-    stream.read(reinterpret_cast<char *>(&data.get()[0]) , length);
-    std::stringstream ss;
-    ss << data.get();
-    return ss.str();
     
+    if(length > 0) {
+        std::unique_ptr<char> data(new char[length]);
+        stream.read(reinterpret_cast<char *>(&data.get()[0]) , length);
+        std::stringstream ss;
+        ss << data.get();
+        return ss.str();
+    } else {
+        return "";
+    }
 }
