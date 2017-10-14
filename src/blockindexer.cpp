@@ -18,14 +18,19 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "blockindexer.h"
+#include "scriptsolver.h"
 #include "blockchaintypes.h"
 #include <iostream>
 #include <sstream>
 #include "leveldb/db.h"
+//#include "hashing.h"
+#include <memory>
+#include <iomanip>
 
 using namespace std;
 
 leveldb::DB* db;
+VtcBlockIndexer::ScriptSolver* scriptSolver;
 
 VtcBlockIndexer::BlockIndexer::BlockIndexer() {
     
@@ -50,6 +55,20 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     stringstream ss;
     ss << "block-" << block.height;
     db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
+
+    // TODO: Verify block integrity
+    for(VtcBlockIndexer::Transaction tx : block.transactions) {
+        for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
+            vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
+            if(addresses.size() == 0) {
+                cout << "No addresses found in tx " << tx.txHash <<  " in block " << block.height << " (" << block.blockHash << ")" << endl;
+            }
+
+        }
+    }
+
+
+
     return true;
 }
-  
+

@@ -28,6 +28,7 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 using namespace std;
 
@@ -69,11 +70,13 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
     uint64_t txCount = readVarInt(blockFile);
     
     fullBlock.transactions = {};
-
     for(uint64_t tx = 0; tx < txCount; tx++) {
         bool segwit = false;
 
         VtcBlockIndexer::Transaction transaction;
+
+        uint64_t startPosTx = blockFile.tellg();
+
         blockFile.read(reinterpret_cast<char *>(&transaction.version), sizeof(transaction.version));
 
         // determine if this is a segwit tx
@@ -116,7 +119,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
                 if(witnessItems > 0) {
                     transaction.inputs.at(input).witnessData = {};
                     for(uint64_t witnessItem = 0; witnessItem < witnessItems; witnessItem++) {
-                        string witnessData = readString(blockFile);
+                        vector<unsigned char> witnessData = readString(blockFile);
                         transaction.inputs.at(input).witnessData.push_back(witnessData);
                     }
                 }
@@ -124,6 +127,20 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         }
 
         blockFile.read(reinterpret_cast<char *>(&transaction.lockTime), sizeof(transaction.lockTime));
+
+        uint64_t endPosTx = blockFile.tellg();
+
+        blockFile.seekg(startPosTx);
+
+        uint64_t length = endPosTx-startPosTx;
+
+        std::unique_ptr<unsigned char> transactionBytes(new unsigned char[length]);
+        blockFile.read(reinterpret_cast<char *>(&transactionBytes.get()[0]) , length);
+        transaction.txHash = doubleSha256(transactionBytes.get(), length);
+        
+        blockFile.seekg(endPosTx);
+        
+        fullBlock.transactions.push_back(transaction);
     }
     
     blockFile.close();

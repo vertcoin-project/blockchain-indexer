@@ -204,8 +204,9 @@ int main(int argc, char* argv[]) {
     string processedBlock = processNextBlock(nextBlock);
     while(processedBlock != "") {
         if(blockHeight % 100000 == 0) {
-            cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << endl;    
+            cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << endl;
         }
+
         blockHeight++;
         nextBlock = processedBlock;
         processedBlock = processNextBlock(nextBlock);

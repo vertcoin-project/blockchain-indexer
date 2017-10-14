@@ -36,7 +36,7 @@ struct ScannedBlock {
 };
 struct TransactionOutput {
     uint64_t value;
-    string script;
+    vector<unsigned char> script;
     uint32_t index;
 };
 
@@ -45,8 +45,8 @@ struct TransactionInput {
     string txHash;
     uint32_t txoIndex;
     uint32_t sequence;
-    string script;
-    vector<string> witnessData;
+    vector<unsigned char> script;
+    vector<vector<unsigned char>> witnessData;
 };
 
 struct Transaction {

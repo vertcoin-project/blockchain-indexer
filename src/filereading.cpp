@@ -25,8 +25,11 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
+#include <vector>
 
-uint64_t readVarInt(std::ifstream& stream)
+using namespace std;
+
+uint64_t readVarInt(ifstream& stream)
 {
     uint8_t prefix = 0;
     stream.read(reinterpret_cast<char *>(&prefix), sizeof(prefix));
@@ -58,28 +61,28 @@ uint64_t readVarInt(std::ifstream& stream)
 }
 
 
-std::string readHash(std::ifstream& stream) {
-    std::unique_ptr<unsigned char> hash(new unsigned char[32]);
+
+
+string readHash(ifstream& stream) {
+    unique_ptr<unsigned char> hash(new unsigned char[32]);
     stream.read(reinterpret_cast<char *>(&hash.get()[0]) , 32);
     
-    std::stringstream ss;
+    stringstream ss;
     for(int i = 0; i < 32; i++)
     {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash.get()[i];
+        ss << hex << setw(2) << setfill('0') << (int)hash.get()[i];
     }
     return ss.str();
 }
 
-std::string readString(std::ifstream& stream) {
+vector<unsigned char> readString(ifstream& stream) {
     uint64_t length = readVarInt(stream);
     
     if(length > 0) {
-        std::unique_ptr<char> data(new char[length]);
-        stream.read(reinterpret_cast<char *>(&data.get()[0]) , length);
-        std::stringstream ss;
-        ss << data.get();
-        return ss.str();
+        vector<unsigned char> data(length);
+        stream.read(reinterpret_cast<char *>(&data[0]) , length);
+        return data;
     } else {
-        return "";
+        return {};
     }
 }

@@ -53,7 +53,6 @@ public:
     /** Indexes the contents of the block
      */
     bool indexBlock(Block block);
-
 };
 
 }

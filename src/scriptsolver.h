@@ -1,6 +1,3 @@
-#include <fstream>
-#include <vector>
-
 /*  VTC Blockindexer - A utility to build additional indexes to the 
     Vertcoin blockchain by scanning and indexing the blockfiles
     downloaded by Vertcoin Core.
@@ -21,23 +18,33 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/** Reads a varint from a ifstream. The first byte determines the size of  
- *  the int. If it is below 0xFD it's a uint8_t, if it's 0xFD it's followed by
- *  a uint16_t (2 bytes). If it's 0xFE it's followed by a uint32_t (4 bytes), 
- *  and 0xFF means a uint64_t (8 bytes)
- * @param stream the stream to read from 
- */   
-uint64_t readVarInt(std::ifstream& stream);
 
-/** Reads a hash (32 bytes) from the ifstream and returns it as hex encoded
- * 
- * @param stream the stream to read from 
- */ 
-std::string readHash(std::ifstream& stream);
+#ifndef SCRIPTSOLVER_H_INCLUDED
+#define SCRIPTSOLVER_H_INCLUDED
 
-/** Reads a string (first a VarInt with the length, then the contents) from 
- * the ifstream and returns it as vector<char>
- * 
- * @param stream the stream to read from 
- */ 
-std::vector<unsigned char> readString(std::ifstream& stream);
+#include <iostream>
+#include <fstream>
+
+#include "blockchaintypes.h"
+
+namespace VtcBlockIndexer {
+
+/**
+ * The ScriptSolver class provides methods to parse the bitcoin script language used in
+ * transaction outputs and determine the public keys / addresses that can spend it.
+ */
+
+class ScriptSolver {
+public:
+    /** Constructs a BlockIndexer instance using the given block data directory
+     */
+    ScriptSolver();
+
+    /** Read addresses from script
+     */
+    vector<string> getAddressesFromScript(vector<unsigned char> scriptString);
+};
+
+}
+
+#endif // SCRIPTSOLVER_H_INCLUDED
