@@ -68,11 +68,33 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
 
     // Pay to compressed pubkey script
     if(
-        35==scriptSize             &&
-        0x21==script[0]            &&  // OP_PUSHDATA(33)
-        0xAC==script[scriptSize-1]     // OP_CHECKSIG
+        35==scriptSize                &&
+        0x21==script.at(0)            &&  // OP_PUSHDATA(33)
+        0xAC==script.at(scriptSize-1)     // OP_CHECKSIG
     ) {
         vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34]));    
+        addresses.push_back(string(address.begin(), address.end()));
+        parsed = true;
+    }
+
+    // P2WSH
+    if(
+        22 == scriptSize            &&
+        0x00 == script.at(0)        &&  
+        0x14 == script.at(1)        
+    ) {
+        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[22]));    
+        addresses.push_back(string(address.begin(), address.end()));
+        parsed = true;
+    }
+
+    // P2WPKH
+    if(
+        34 == scriptSize            &&
+        0x00 == script.at(0)        &&  
+        0x20 == script.at(1)        
+    ) {
+        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[34]));    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }

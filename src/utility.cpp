@@ -29,7 +29,7 @@
 #include <secp256k1.h>
 #include "crypto/ripemd160.h"
 #include "crypto/base58.h"
-
+#include "crypto/bech32.h"
 using namespace std;
 
 namespace
@@ -122,4 +122,10 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
     {
         return vector<unsigned char>(b58.get(), b58.get() + size);
     }
+}
+
+vector<unsigned char> VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in) {
+    string address = bech32::Encode("vtc", in);
+    cout << "Bech32 Address" << address << endl;
+    return vector<unsigned char>(address.begin(), address.end());
 }

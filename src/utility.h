@@ -39,6 +39,7 @@ namespace VtcBlockIndexer {
             static std::vector<unsigned char> ripeMD160(std::vector<unsigned char> in);
             static std::vector<unsigned char> base58(std::vector<unsigned char> in);
             static std::vector<unsigned char> ripeMD160ToAddress(std::vector<unsigned char> ripeMD);
+            static std::vector<unsigned char> bech32Address(std::vector<unsigned char> in);
             ~Utility();
             
         private:
