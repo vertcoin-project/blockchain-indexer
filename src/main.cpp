@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <memory>
 #include <vector>
+#include <ctime>
 
 #include "utility.h"
 #include "blockscanner.h"
@@ -43,6 +44,7 @@ using namespace std;
 unordered_map<string, vector<VtcBlockIndexer::ScannedBlock>> blocks;
 int totalBlocks = 0;
 int blockHeight = 0;
+const clock_t begin_time = clock();
 string blocksDir;
 VtcBlockIndexer::BlockReader blockReader("");
 VtcBlockIndexer::BlockIndexer blockIndexer;
@@ -193,12 +195,7 @@ int main(int argc, char* argv[]) {
     blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     cout << "Opening LevelDB..." << endl;
     blockIndexer.open();
-    
-    string test("\x04\x50\x86\x3A\xD6\x4A\x87\xAE\x8A\x2F\xE8\x3C\x1A\xF1\xA8\x40\x3C\xB5\x3F\x53\xE4\x86\xD8\x51\x1D\xAD\x8A\x04\x88\x7E\x5B\x23\x52\x2C\xD4\x70\x24\x34\x53\xA2\x99\xFA\x9E\x77\x23\x77\x16\x10\x3A\xBC\x11\xA1\xDF\x38\x85\x5E\xD6\xF2\xEE\x18\x7E\x9C\x58\x2B\xA6");
-    vector<unsigned char> testVector(test.begin(), test.end());
-    testVector.resize(65);
-    VtcBlockIndexer::Utility::publicKeyToAddress(testVector);
-    
+
    // return 0;
 
     cout << "Scanning blocks..." << endl;
@@ -208,16 +205,11 @@ int main(int argc, char* argv[]) {
     cout << "Found " << totalBlocks << " blocks. Constructing longest chain..." << endl;
 
     // The blockchain starts with the genesis block that has a zero hash as Previous Block Hash
-    // string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
-    
-    // Start at 700k
-    string nextBlock = "b03aa44c38b058e047969546321059abc6827c31d0e3f1d7c50a4797c975169e";
-    blockHeight = 700000;
-
+    string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
     string processedBlock = processNextBlock(nextBlock);
     while(processedBlock != "") {
-        if(blockHeight % 100000 == 0) {
-            cout << "Constructing chain at height " << blockHeight << " hash: " << processedBlock << endl;
+        if(blockHeight % 1000 == 0) {
+            cout << "Constructing chain at height " << blockHeight << " Time : " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << " seconds" << endl;
         }
 
         blockHeight++;
@@ -226,5 +218,5 @@ int main(int argc, char* argv[]) {
     }
 
     blockIndexer.close();
-    cout << "Done. Processed " << blockHeight << " blocks. Have a nice day." << endl;
+    cout << "Done. Processed " << blockHeight << " blocks. Time : " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << " seconds. Have a nice day." << endl;
 }

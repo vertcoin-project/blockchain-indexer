@@ -53,6 +53,11 @@ public:
     /** Indexes the contents of the block
      */
     bool indexBlock(Block block);
+
+private:
+    /** Returns the next index to use for storing the TXO
+     */
+    int getNextTxoIndex(std::string prefix);
 };
 
 }

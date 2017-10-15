@@ -148,7 +148,6 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
     std::unique_ptr<char> b58(new char[80]);
     size_t size = 80;
     if(!b58enc(b58.get(), &size, in.data(), in.size())) {
-        std::cout << "B58Enc failed" << endl;
         return {};
     }
     else 

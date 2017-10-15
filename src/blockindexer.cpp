@@ -26,9 +26,11 @@
 //#include "hashing.h"
 #include <memory>
 #include <iomanip>
+#include <unordered_map>
 
 using namespace std;
 
+unordered_map<string, int> nextTxoIndex;
 leveldb::DB* db;
 VtcBlockIndexer::ScriptSolver* scriptSolver;
 
@@ -51,19 +53,50 @@ bool VtcBlockIndexer::BlockIndexer::close() {
     return true;
 }
 
+int VtcBlockIndexer::BlockIndexer::getNextTxoIndex(string prefix) {
+    if(nextTxoIndex.find(prefix) == nextTxoIndex.end()) {
+        leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+        nextTxoIndex[prefix] = 1;
+        string start(prefix + "-txo-00000001");
+        string limit(prefix + "-txo-99999999");
+        
+        for (it->Seek(start);
+                it->Valid() && it->key().ToString() < limit;
+                it->Next()) {
+                    nextTxoIndex[prefix]++;
+        }
+        assert(it->status().ok());  // Check for any errors found during the scan
+        delete it;
+    } else {
+        nextTxoIndex[prefix]++;    
+    }
+    
+    return nextTxoIndex[prefix];
+  }
+
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     stringstream ss;
-    ss << "block-" << block.height;
+    ss << "block-" << setw(8) << setfill('0') << block.height;
     db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
 
     // TODO: Verify block integrity
     for(VtcBlockIndexer::Transaction tx : block.transactions) {
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
-            if(addresses.size() == 2 && addresses.at(1) == "P2SH") {
-                cout << "P2SH Address in tx " << tx.txHash <<  " in block " << block.height << " is " << addresses.at(0) << endl;
+            for(string address : addresses) {
+                int nextIndex = getNextTxoIndex(address);
+                stringstream txoKey;
+                txoKey << address << "-txo-" << setw(8) << setfill('0') << nextIndex;
+                stringstream txoValue;
+                txoValue << tx.txHash << setw(8) << setfill('0') << out.index;
+                db->Put(leveldb::WriteOptions(), txoKey.str(), txoValue.str());
             }
+        }
 
+        for(VtcBlockIndexer::TransactionInput txi : tx.inputs) {
+            stringstream txSpentKey;
+            txSpentKey << "txo-" << txi.txHash << "-" << setw(8) << setfill('0') << txi.txoIndex << "-spent";
+            db->Put(leveldb::WriteOptions(), txSpentKey.str(), block.blockHash);
         }
     }
 

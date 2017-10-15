@@ -121,7 +121,6 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         // TODO: distill the address and add it to the return array.
         vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]));    
         addresses.push_back(string(address.begin(), address.end()));
-        addresses.push_back("P2SH");
         parsed = true;
     }
 
