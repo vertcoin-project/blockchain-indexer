@@ -158,6 +158,9 @@ string processNextBlock(string prevBlockHash) {
         return "";
     }
 
+    if(blockHeight >= 10) 
+    return "";
+
     // Find the blocks that match
     vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
 
@@ -193,6 +196,8 @@ int main(int argc, char* argv[]) {
     cout << "Opening LevelDB..." << endl;
     blockIndexer.open();
     
+
+
     cout << "Scanning blocks..." << endl;
 
     scanBlockFiles(argv[1]);

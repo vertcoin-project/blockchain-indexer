@@ -18,9 +18,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "blockreader.h"
-#include "filereading.h"
+#include "filereader.h"
 #include "blockchaintypes.h"
-#include "hashing.h"
+#include "utility.h"
 #include <string.h>
 #include <memory>
 #include <sstream>
@@ -67,7 +67,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
 
     // Find number of transactions
     blockFile.seekg(block.filePosition+80, ios_base::beg);
-    uint64_t txCount = readVarInt(blockFile);
+    uint64_t txCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
     
     fullBlock.transactions = {};
     for(uint64_t tx = 0; tx < txCount; tx++) {
@@ -91,35 +91,35 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         
         transaction.inputs = {};
 
-        uint64_t inputCount = readVarInt(blockFile);
+        uint64_t inputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
         
         for(uint64_t input = 0; input < inputCount; input++) {
             VtcBlockIndexer::TransactionInput txInput;
-            txInput.txHash = readHash(blockFile);
+            txInput.txHash = VtcBlockIndexer::FileReader::readHash(blockFile);
             blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
-            txInput.script = readString(blockFile);
+            txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
             blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
             txInput.index = input;
             transaction.inputs.push_back(txInput);
         }
         
-        uint64_t outputCount = readVarInt(blockFile);
+        uint64_t outputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
         transaction.outputs = {};
         for(uint64_t output = 0; output < outputCount; output++) {
             VtcBlockIndexer::TransactionOutput txOutput;
             blockFile.read(reinterpret_cast<char *>(&txOutput.value), sizeof(txOutput.value));
-            txOutput.script = readString(blockFile);
+            txOutput.script = VtcBlockIndexer::FileReader::readString(blockFile);
             txOutput.index = output;
             transaction.outputs.push_back(txOutput);
         }
 
         if(segwit) {
             for(uint64_t input = 0; input < inputCount; input++) {
-                uint64_t witnessItems = readVarInt(blockFile);
+                uint64_t witnessItems = VtcBlockIndexer::FileReader::readVarInt(blockFile);
                 if(witnessItems > 0) {
                     transaction.inputs.at(input).witnessData = {};
                     for(uint64_t witnessItem = 0; witnessItem < witnessItems; witnessItem++) {
-                        vector<unsigned char> witnessData = readString(blockFile);
+                        vector<unsigned char> witnessData = VtcBlockIndexer::FileReader::readString(blockFile);
                         transaction.inputs.at(input).witnessData.push_back(witnessData);
                     }
                 }
@@ -134,9 +134,9 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
 
         uint64_t length = endPosTx-startPosTx;
 
-        std::unique_ptr<unsigned char> transactionBytes(new unsigned char[length]);
-        blockFile.read(reinterpret_cast<char *>(&transactionBytes.get()[0]) , length);
-        transaction.txHash = doubleSha256(transactionBytes.get(), length);
+        std::vector<unsigned char> transactionBytes(length);
+        blockFile.read(reinterpret_cast<char *>(&transactionBytes[0]) , length);
+        transaction.txHash = VtcBlockIndexer::Utility::hashToHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(transactionBytes)));
         
         blockFile.seekg(endPosTx);
         

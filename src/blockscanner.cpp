@@ -18,7 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "blockscanner.h"
-#include "hashing.h"
+#include "utility.h"
 #include <string.h>
 #include <memory>
 #include <sstream>
@@ -64,19 +64,14 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     block.fileName = this->blockFileName;
     block.filePosition = this->blockFileStream.tellg();
 
-    std::unique_ptr<unsigned char> blockHeader(new unsigned char[80]);
-    this->blockFileStream.read(reinterpret_cast<char *>(&blockHeader.get()[0]) , 80);
+    vector<unsigned char> blockHeader(80);
+    this->blockFileStream.read(reinterpret_cast<char *>(&blockHeader[0]) , 80);
 
-    block.blockHash = doubleSha256(blockHeader.get(), 80);
-    std::unique_ptr<unsigned char> previousBlockHash(new unsigned char[32]);
-    memcpy(previousBlockHash.get(), blockHeader.get()+4, 32);
+    block.blockHash = VtcBlockIndexer::Utility::hashToHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(blockHeader)));
+    vector<unsigned char> previousBlockHash(32);
+    memcpy(&previousBlockHash[0], &blockHeader[4], 32);
 
-    std::stringstream ss;
-    for(int i = 0; i < 32; i++)
-    {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)previousBlockHash.get()[i];
-    }
-    block.previousBlockHash = ss.str();
+    block.previousBlockHash =  VtcBlockIndexer::Utility::hashToHex(previousBlockHash);
     
     this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
     

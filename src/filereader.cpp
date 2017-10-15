@@ -1,4 +1,4 @@
-#include "filereading.h"
+#include "filereader.h"
 /*  VTC Blockindexer - A utility to build additional indexes to the 
     Vertcoin blockchain by scanning and indexing the blockfiles
     downloaded by Vertcoin Core.
@@ -29,7 +29,7 @@
 
 using namespace std;
 
-uint64_t readVarInt(ifstream& stream)
+uint64_t VtcBlockIndexer::FileReader::readVarInt(ifstream& stream)
 {
     uint8_t prefix = 0;
     stream.read(reinterpret_cast<char *>(&prefix), sizeof(prefix));
@@ -63,7 +63,7 @@ uint64_t readVarInt(ifstream& stream)
 
 
 
-string readHash(ifstream& stream) {
+string VtcBlockIndexer::FileReader::readHash(ifstream& stream) {
     unique_ptr<unsigned char> hash(new unsigned char[32]);
     stream.read(reinterpret_cast<char *>(&hash.get()[0]) , 32);
     
@@ -75,7 +75,7 @@ string readHash(ifstream& stream) {
     return ss.str();
 }
 
-vector<unsigned char> readString(ifstream& stream) {
+vector<unsigned char> VtcBlockIndexer::FileReader::readString(ifstream& stream) {
     uint64_t length = readVarInt(stream);
     
     if(length > 0) {
