@@ -73,19 +73,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0xAC==script[scriptSize-1]     // OP_CHECKSIG
     ) {
         vector<unsigned char> decompressedKey = VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned char>(&script[1], &script[34]));
-
-        stringstream ssCompressed;
-        for(uint64_t i = 1; i < 34; i++)
-        {
-            ssCompressed << hex << setw(2) << setfill('0') << static_cast<int>(script.at(i));
-        }
-
-        stringstream ssDecompressed;
-        for(uint64_t i = 0; i < decompressedKey.size(); i++)
-        {
-            ssDecompressed << hex << setw(2) << setfill('0') << static_cast<int>(decompressedKey.at(i));
-        }
-        cout << "Decompressed key : [" << ssCompressed.str() << "] into [" << ssDecompressed.str() << "]" << endl;
+        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(decompressedKey);    
 
 
         // TODO: distill the address and add it to the return array.

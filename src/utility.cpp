@@ -28,6 +28,7 @@
 #include <vector>
 #include <secp256k1.h>
 #include "crypto/ripemd160.h"
+#include "crypto/base58.h"
 
 using namespace std;
 
@@ -85,6 +86,27 @@ vector<unsigned char> VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
+    cout << "Public key: " << hashToHex(publicKey) << endl;
+    
+    vector<unsigned char> hashedKey = sha256(publicKey);
+    cout << "Hashed key: " << hashToHex(hashedKey) << endl;
+
+    vector<unsigned char> ripeMD = ripeMD160(hashedKey);
+    cout << "RipeMD: " << hashToHex(ripeMD) << endl;
+
+    ripeMD.insert(ripeMD.begin(), 0x47);
+    cout << "RipeMD Prefixed: " << hashToHex(ripeMD) << endl;
+    
+    vector<unsigned char> doubleHashedRipeMD = sha256(sha256(ripeMD));
+    for(int i = 0; i < 4; i++) {
+        ripeMD.push_back(doubleHashedRipeMD.at(i));
+    }
+
+    cout << "RipeMD with checksum: " << hashToHex(ripeMD) << endl;
+
+    vector<unsigned char> base58Value = base58(ripeMD);
+
+    cout << "Address: " << &base58Value[0] << endl;
 
     return {};
 }
@@ -95,3 +117,17 @@ vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160(vector<unsigned char> 
     return vector<unsigned char>(hash, hash + CRIPEMD160::OUTPUT_SIZE);
 }
 
+
+vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in) {
+    
+    std::unique_ptr<char> b58(new char[80]);
+    size_t size = 80;
+    if(!b58enc(b58.get(), &size, in.data(), in.size())) {
+        std::cout << "B58Enc failed" << endl;
+        return {};
+    }
+    else 
+    {
+        return vector<unsigned char>(b58.get(), b58.get() + 80);
+    }
+}
