@@ -49,7 +49,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
               
         
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToAddress(vector<unsigned char>(&script[3], &script[23]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char>(&script[3], &script[23]));    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -105,9 +105,6 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         scriptSize <= 42        &&
         0x6A == script.at(0)
     ) {
-        // TODO: Remove this line. Now adding an empty string to the array to have the 
-        // caller not log the block
-        addresses.push_back("");
         parsed = true;
     }
 
@@ -120,8 +117,11 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
               
         
     ) {
+
         // TODO: distill the address and add it to the return array.
-        addresses.push_back("");
+        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]));    
+        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back("P2SH");
         parsed = true;
     }
 

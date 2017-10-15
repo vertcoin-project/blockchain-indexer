@@ -208,7 +208,12 @@ int main(int argc, char* argv[]) {
     cout << "Found " << totalBlocks << " blocks. Constructing longest chain..." << endl;
 
     // The blockchain starts with the genesis block that has a zero hash as Previous Block Hash
-    string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
+    // string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
+    
+    // Start at 700k
+    string nextBlock = "b03aa44c38b058e047969546321059abc6827c31d0e3f1d7c50a4797c975169e";
+    blockHeight = 700000;
+
     string processedBlock = processNextBlock(nextBlock);
     while(processedBlock != "") {
         if(blockHeight % 100000 == 0) {

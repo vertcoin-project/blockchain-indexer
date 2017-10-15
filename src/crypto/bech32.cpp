@@ -32,6 +32,9 @@ data Cat(data x, const data& y)
     return x;
 }
 
+
+
+
 /** This function will compute what 6 5-bit values to XOR into the last 6 input values, in order to
  *  make the checksum 0. These 6 values are packed together in a single 30-bit integer. The higher
  *  bits correspond to earlier values. */
@@ -149,18 +152,10 @@ std::string Encode(const std::string& hrp, const data& values) {
     data checksum = CreateChecksum(hrp, values);
     data combined = Cat(values, checksum);
 
-    
-
     std::string ret = hrp + '1';
     ret.reserve(ret.size() + combined.size());
     for (auto c : combined) {
-
-        std::cout << c << endl;
-
         ret += CHARSET[c];
-
-        std::cout << "Bech 32 : [" << ret << "]" << std::endl;
-
     }
     return ret;
 }

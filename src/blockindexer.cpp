@@ -60,9 +60,10 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     for(VtcBlockIndexer::Transaction tx : block.transactions) {
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
-            if(addresses.size() == 0) {
-                cout << "No addresses found in tx " << tx.txHash <<  " in block " << block.height << " (" << block.blockHash << ")" << endl;
+            if(addresses.size() == 2 && addresses.at(1) == "P2SH") {
+                cout << "P2SH Address in tx " << tx.txHash <<  " in block " << block.height << " is " << addresses.at(0) << endl;
             }
+
         }
     }
 

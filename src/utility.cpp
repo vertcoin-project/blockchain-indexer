@@ -30,12 +30,38 @@
 #include "crypto/ripemd160.h"
 #include "crypto/base58.h"
 #include "crypto/bech32.h"
+
 using namespace std;
 
 namespace
 {
-/* Global secp256k1_context object used for verification. */
-secp256k1_context* secp256k1_context_verify = NULL;
+    /* Global secp256k1_context object used for verification. */
+    secp256k1_context* secp256k1_context_verify = NULL;
+
+    typedef std::vector<uint8_t> data;
+
+    template<int frombits, int tobits, bool pad>
+    bool convertbits(data& out, const data& in) {
+        int acc = 0;
+        int bits = 0;
+        const int maxv = (1 << tobits) - 1;
+        const int max_acc = (1 << (frombits + tobits - 1)) - 1;
+        for (size_t i = 0; i < in.size(); ++i) {
+            int value = in[i];
+            acc = ((acc << frombits) | value) & max_acc;
+            bits += frombits;
+            while (bits >= tobits) {
+                bits -= tobits;
+                out.push_back((acc >> bits) & maxv);
+            }
+        }
+        if (pad) {
+            if (bits) out.push_back((acc << (tobits - bits)) & maxv);
+        } else if (bits >= frombits || ((acc << (tobits - bits)) & maxv)) {
+            return false;
+        }
+        return true;
+    }
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::sha256(vector<unsigned char> input)
@@ -91,11 +117,18 @@ vector<unsigned char> VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned
 vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
     vector<unsigned char> hashedKey = sha256(publicKey);
     vector<unsigned char> ripeMD = ripeMD160(hashedKey);
-    return ripeMD160ToAddress(ripeMD);
+    return ripeMD160ToP2PKAddress(ripeMD);
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(vector<unsigned char> ripeMD) {
-    ripeMD.insert(ripeMD.begin(), 0x47);
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD) {
+    return ripeMD160ToAddress(0x47, ripeMD);
+}
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD) {
+    return ripeMD160ToAddress(0x05, ripeMD);
+}
+
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD) {
+    ripeMD.insert(ripeMD.begin(), versionByte);
     vector<unsigned char> doubleHashedRipeMD = sha256(sha256(ripeMD));
     for(int i = 0; i < 4; i++) {
         ripeMD.push_back(doubleHashedRipeMD.at(i));
@@ -125,7 +158,13 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in) {
-    string address = bech32::Encode("vtc", in);
-    cout << "Bech32 Address" << address << endl;
-    return vector<unsigned char>(address.begin(), address.end());
+    vector<unsigned char> enc;
+    enc.push_back(0); // witness version
+    if(convertbits<8, 5, true>(enc, in)) {
+        string address = bech32::Encode("vtc", enc);
+        return vector<unsigned char>(address.begin(), address.end());
+    }
+    else{
+        return {};
+    }
 }
