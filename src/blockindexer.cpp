@@ -63,7 +63,6 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
             if(addresses.size() == 0) {
                 cout << "No addresses found in tx " << tx.txHash <<  " in block " << block.height << " (" << block.blockHash << ")" << endl;
             }
-
         }
     }
 

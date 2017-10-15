@@ -29,6 +29,7 @@
 #include <memory>
 #include <vector>
 
+#include "utility.h"
 #include "blockscanner.h"
 #include "blockindexer.h"
 #include "blockchaintypes.h"
@@ -158,9 +159,6 @@ string processNextBlock(string prevBlockHash) {
         return "";
     }
 
-    if(blockHeight >= 10) 
-    return "";
-
     // Find the blocks that match
     vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
 
@@ -196,7 +194,12 @@ int main(int argc, char* argv[]) {
     cout << "Opening LevelDB..." << endl;
     blockIndexer.open();
     
-
+    string test("\x04\x50\x86\x3A\xD6\x4A\x87\xAE\x8A\x2F\xE8\x3C\x1A\xF1\xA8\x40\x3C\xB5\x3F\x53\xE4\x86\xD8\x51\x1D\xAD\x8A\x04\x88\x7E\x5B\x23\x52\x2C\xD4\x70\x24\x34\x53\xA2\x99\xFA\x9E\x77\x23\x77\x16\x10\x3A\xBC\x11\xA1\xDF\x38\x85\x5E\xD6\xF2\xEE\x18\x7E\x9C\x58\x2B\xA6");
+    vector<unsigned char> testVector(test.begin(), test.end());
+    testVector.resize(65);
+    VtcBlockIndexer::Utility::publicKeyToAddress(testVector);
+    
+   // return 0;
 
     cout << "Scanning blocks..." << endl;
 

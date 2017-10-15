@@ -40,10 +40,8 @@ secp256k1_context* secp256k1_context_verify = NULL;
 
 vector<unsigned char> VtcBlockIndexer::Utility::sha256(vector<unsigned char> input)
 {
-    unique_ptr<char> outputBuffer(new char[65]);
     unique_ptr<unsigned char> hash(new unsigned char [SHA256_DIGEST_LENGTH]);
-   
-    unique_ptr<unsigned char> intermediate(new unsigned char [SHA256_DIGEST_LENGTH]);
+
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, &input[0], input.size());
@@ -74,41 +72,35 @@ VtcBlockIndexer::Utility::~Utility() {
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned char> compressedKey) {
+
     initECCContextIfNeeded();
     secp256k1_pubkey pubkey;
-    if (!secp256k1_ec_pubkey_parse(secp256k1_context_verify, &pubkey, &compressedKey[0], compressedKey.size())) {
+    if (!secp256k1_ec_pubkey_parse(secp256k1_context_verify, &pubkey, &compressedKey[0], 33)) {
         return {};
     }
     unique_ptr<unsigned char> pub(new unsigned char[65]);
     size_t publen = 65;
     secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub.get(), &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED);
-    return vector<unsigned char>(pub.get(), pub.get() + 65);
-}
+
+    
+     vector<unsigned char> returnValue (pub.get(), pub.get() + 65);
+     return returnValue;
+}     
+
 
 vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
-    cout << "Public key: " << hashToHex(publicKey) << endl;
-    
     vector<unsigned char> hashedKey = sha256(publicKey);
-    cout << "Hashed key: " << hashToHex(hashedKey) << endl;
-
     vector<unsigned char> ripeMD = ripeMD160(hashedKey);
-    cout << "RipeMD: " << hashToHex(ripeMD) << endl;
+    return ripeMD160ToAddress(ripeMD);
+}
 
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(vector<unsigned char> ripeMD) {
     ripeMD.insert(ripeMD.begin(), 0x47);
-    cout << "RipeMD Prefixed: " << hashToHex(ripeMD) << endl;
-    
     vector<unsigned char> doubleHashedRipeMD = sha256(sha256(ripeMD));
     for(int i = 0; i < 4; i++) {
         ripeMD.push_back(doubleHashedRipeMD.at(i));
     }
-
-    cout << "RipeMD with checksum: " << hashToHex(ripeMD) << endl;
-
-    vector<unsigned char> base58Value = base58(ripeMD);
-
-    cout << "Address: " << &base58Value[0] << endl;
-
-    return {};
+    return base58(ripeMD);
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160(vector<unsigned char> in) {
@@ -128,6 +120,6 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
     }
     else 
     {
-        return vector<unsigned char>(b58.get(), b58.get() + 80);
+        return vector<unsigned char>(b58.get(), b58.get() + size);
     }
 }

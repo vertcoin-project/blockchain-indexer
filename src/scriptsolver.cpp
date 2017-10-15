@@ -49,8 +49,8 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
               
         
     ) {
-        // TODO: distill the address and add it to the return array.
-        addresses.push_back("");
+        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToAddress(vector<unsigned char>(&script[3], &script[23]));    
+        addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
 
@@ -61,8 +61,8 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
             0xAC==script.at(scriptSize-1) // OP_CHECKSIG
               
     ) {
-        // TODO: distill the address and add it to the return array.
-        addresses.push_back("");
+        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[66]));    
+        addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
 
@@ -72,12 +72,8 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x21==script[0]            &&  // OP_PUSHDATA(33)
         0xAC==script[scriptSize-1]     // OP_CHECKSIG
     ) {
-        vector<unsigned char> decompressedKey = VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned char>(&script[1], &script[34]));
-        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(decompressedKey);    
-
-
-        // TODO: distill the address and add it to the return array.
-        addresses.push_back("");
+        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34]));    
+        addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
 
