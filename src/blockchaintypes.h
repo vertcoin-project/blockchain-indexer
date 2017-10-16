@@ -43,6 +43,7 @@ struct TransactionOutput {
 struct TransactionInput {
     uint32_t index;
     string txHash;
+    bool coinbase;
     uint32_t txoIndex;
     uint32_t sequence;
     vector<unsigned char> script;

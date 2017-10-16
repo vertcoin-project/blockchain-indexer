@@ -54,7 +54,17 @@ public:
      */
     bool indexBlock(Block block);
 
+    /** Returns true when there's already a block with the passed hash
+     * in the index at the passed blockheight. No need to reindex
+     * in that case.
+     */
+    bool hasIndexedBlock(std::string blockHash, int blockHeight);
+
 private:
+    /** Removes TXOs and spends from a particular blockhash 
+     * in case of a reorg */
+
+    bool clearBlockTxos(std::string blockHash);
     /** Returns the next index to use for storing the TXO
      */
     int getNextTxoIndex(std::string prefix);

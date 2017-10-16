@@ -96,10 +96,12 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         for(uint64_t input = 0; input < inputCount; input++) {
             VtcBlockIndexer::TransactionInput txInput;
             txInput.txHash = VtcBlockIndexer::FileReader::readHash(blockFile);
+            
             blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
             txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
             blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
             txInput.index = input;
+            txInput.coinbase = (input == 0 && txHash == "0000000000000000000000000000000000000000000000000000000000000000" && txInput.txoIndex == 4294967295);
             transaction.inputs.push_back(txInput);
         }
         

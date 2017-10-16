@@ -170,8 +170,10 @@ string processNextBlock(string prevBlockHash) {
             bestBlock = findLongestChain(matchingBlocks);
         } 
 
-        VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock, blockHeight);
-        blockIndexer.indexBlock(fullBlock);
+        if(!blockIndexer.hasIndexedBlock(bestBlock.blockHash, blockHeight)) {
+            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock, blockHeight);
+            blockIndexer.indexBlock(fullBlock);
+        }
         return bestBlock.blockHash;
 
     } else {
@@ -213,6 +215,7 @@ int main(int argc, char* argv[]) {
         }
 
         blockHeight++;
+        if(blockHeight == 700000) blockHeight++;
         nextBlock = processedBlock;
         processedBlock = processNextBlock(nextBlock);
     }
