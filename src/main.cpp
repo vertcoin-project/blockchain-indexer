@@ -29,12 +29,14 @@
 #include <memory>
 #include <vector>
 #include <ctime>
-
+#include "leveldb/db.h"
+#include "leveldb/write_batch.h"
 #include "utility.h"
 #include "blockscanner.h"
 #include "blockindexer.h"
 #include "blockchaintypes.h"
 #include "blockreader.h"
+#include "httpserver.h"
 
 using namespace std;
 
@@ -42,12 +44,14 @@ using namespace std;
 // is that there can be multiple blocks having the same previousBlockHash in 
 // case there is a orphaned block in the block files.
 unordered_map<string, vector<VtcBlockIndexer::ScannedBlock>> blocks;
+leveldb::DB *db;
 int totalBlocks = 0;
 int blockHeight = 0;
 const clock_t begin_time = clock();
 string blocksDir;
 VtcBlockIndexer::BlockReader blockReader("");
-VtcBlockIndexer::BlockIndexer blockIndexer;
+VtcBlockIndexer::BlockIndexer blockIndexer(db);
+VtcBlockIndexer::HttpServer httpServer(db);
 /** Uses the blockscanner to scan blocks within a file and add them to the
  * unordered map.
  * 
@@ -155,23 +159,27 @@ VtcBlockIndexer::ScannedBlock findLongestChain(vector<VtcBlockIndexer::ScannedBl
  * extend the chain onto.
  */
 string processNextBlock(string prevBlockHash) {
+    
+    
     // If there is no block present with this hash as previousBlockHash, return an empty 
     // string signaling we're at the end of the chain.
     if(blocks.find(prevBlockHash) == blocks.end()) {
         return "";
     }
-
+    
     // Find the blocks that match
     vector<VtcBlockIndexer::ScannedBlock> matchingBlocks = blocks[prevBlockHash];
-
+    
     if(matchingBlocks.size() > 0) {
         VtcBlockIndexer::ScannedBlock bestBlock = matchingBlocks.at(0);
+        
         if(matchingBlocks.size() > 1) { 
             bestBlock = findLongestChain(matchingBlocks);
         } 
-
+    
         if(!blockIndexer.hasIndexedBlock(bestBlock.blockHash, blockHeight)) {
             VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock, blockHeight);
+           
             blockIndexer.indexBlock(fullBlock);
         }
         return bestBlock.blockHash;
@@ -184,25 +192,18 @@ string processNextBlock(string prevBlockHash) {
 }
 
 
-
-
-int main(int argc, char* argv[]) {
-    // If user did not supply the command line parameter, show the usage and exit.
-    if(argc < 2) {
-        cerr << "Usage: vtc_indexer [blocks_dir]" << endl;
-        exit(0);
-    }
+void indexChain(char* blocksDirArg) {
+   
+    blocksDir.assign(blocksDirArg);
     
-    blocksDir.assign(argv[1]);
     blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     cout << "Opening LevelDB..." << endl;
-    blockIndexer.open();
-
+    
    // return 0;
 
     cout << "Scanning blocks..." << endl;
 
-    scanBlockFiles(argv[1]);
+    scanBlockFiles(blocksDirArg);
     
     cout << "Found " << totalBlocks << " blocks. Constructing longest chain..." << endl;
 
@@ -219,6 +220,25 @@ int main(int argc, char* argv[]) {
         processedBlock = processNextBlock(nextBlock);
     }
 
-    blockIndexer.close();
     cout << "Done. Processed " << blockHeight << " blocks. Time : " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << " seconds. Have a nice day." << endl;
+}
+
+int main(int argc, char* argv[]) {
+     // If user did not supply the command line parameter, show the usage and exit.
+     if(argc < 2) {
+        cerr << "Usage: vtc_indexer [blocks_dir]" << endl;
+        exit(0);
+    }
+    leveldb::Options options;
+    options.create_if_missing = true;
+    leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
+    assert(status.ok());
+
+    blockIndexer = VtcBlockIndexer::BlockIndexer(db);
+    httpServer = VtcBlockIndexer::HttpServer(db);
+
+    indexChain(argv[1]);
+
+    httpServer.run(); 
+    
 }

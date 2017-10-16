@@ -22,41 +22,26 @@
 #include "blockchaintypes.h"
 #include <iostream>
 #include <sstream>
-#include "leveldb/db.h"
+
 //#include "hashing.h"
 #include <memory>
 #include <iomanip>
 #include <unordered_map>
-#include "leveldb/write_batch.h"
+
 
 using namespace std;
 
 unordered_map<string, int> nextTxoIndex;
-leveldb::DB* db;
 VtcBlockIndexer::ScriptSolver* scriptSolver;
 
-VtcBlockIndexer::BlockIndexer::BlockIndexer() {
-    
+VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance) {
+    this->db = dbInstance;
 }
 
-bool VtcBlockIndexer::BlockIndexer::open() {
-    leveldb::Options options;
-    options.create_if_missing = true;
-    leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
-    if(!status.ok()) {
-        cerr << status.ToString() << endl;
-    }
-    return status.ok();
-}
-
-bool VtcBlockIndexer::BlockIndexer::close() {
-    delete db;
-    return true;
-}
 
 int VtcBlockIndexer::BlockIndexer::getNextTxoIndex(string prefix) {
     if(nextTxoIndex.find(prefix) == nextTxoIndex.end()) {
-        leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+        leveldb::Iterator* it = this->db->NewIterator(leveldb::ReadOptions());
         nextTxoIndex[prefix] = 1;
         string start(prefix + "-00000001");
         string limit(prefix + "-99999999");
@@ -80,7 +65,7 @@ bool VtcBlockIndexer::BlockIndexer::clearBlockTxos(string blockHash) {
     
     string start(blockHash + "-txo-00000001");
     string limit(blockHash + "-txo-99999999");
-    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    leveldb::Iterator* it = this->db->NewIterator(leveldb::ReadOptions());
     for (it->Seek(start);
             it->Valid() && it->key().ToString() < limit;
             it->Next()) {
@@ -91,7 +76,7 @@ bool VtcBlockIndexer::BlockIndexer::clearBlockTxos(string blockHash) {
 
     string spentStart(blockHash + "-txospent-00000001");
     string spentLimit(blockHash + "-txospent-99999999");
-    it = db->NewIterator(leveldb::ReadOptions());
+    it = this->db->NewIterator(leveldb::ReadOptions());
     for (it->Seek(spentStart);
             it->Valid() && it->key().ToString() < spentLimit;
             it->Next()) {
@@ -100,7 +85,7 @@ bool VtcBlockIndexer::BlockIndexer::clearBlockTxos(string blockHash) {
     assert(it->status().ok());  // Check for any errors found during the scan
     delete it;
 
-    leveldb::Status s = db->Write(leveldb::WriteOptions(), &batch);
+    leveldb::Status s = this->db->Write(leveldb::WriteOptions(), &batch);
     return s.ok();
 }
 
@@ -110,7 +95,7 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
     ss << "block-" << setw(8) << setfill('0') << blockHeight;
 
     string existingBlockHash;
-    leveldb::Status s = db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
+    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
     if(s.ok() && existingBlockHash == blockHash) {
         return true;
     }
@@ -123,7 +108,8 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     ss << "block-" << setw(8) << setfill('0') << block.height;
 
     string existingBlockHash;
-    leveldb::Status s = db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
+    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
+
     if(s.ok() && existingBlockHash == block.blockHash) {
         // Block found in database and matches. This block is indexed already, so skip.
         return true;
@@ -133,7 +119,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     }
     
 
-    db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
+    this->db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
 
     // TODO: Verify block integrity
     for(VtcBlockIndexer::Transaction tx : block.transactions) {
@@ -144,13 +130,13 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
                 stringstream txoKey;
                 txoKey << address << "-txo-" << setw(8) << setfill('0') << nextIndex;
                 stringstream txoValue;
-                txoValue << tx.txHash << setw(8) << setfill('0') << out.index << setw(8) << setfill('0') << block.height;
-                db->Put(leveldb::WriteOptions(), txoKey.str(), txoValue.str());
+                txoValue << tx.txHash << setw(8) << setfill('0') << out.index << setw(8) << setfill('0') << block.height << out.value;
+                this->db->Put(leveldb::WriteOptions(), txoKey.str(), txoValue.str());
 
                 nextIndex = getNextTxoIndex(block.blockHash + "-txo");
                 stringstream blockTxoKey;
                 blockTxoKey << block.blockHash << "-txo-" << setw(8) << setfill('0') << nextIndex;
-                db->Put(leveldb::WriteOptions(), blockTxoKey.str(), txoKey.str());
+                this->db->Put(leveldb::WriteOptions(), blockTxoKey.str(), txoKey.str());
             }
         }
 
@@ -159,12 +145,12 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
             {
                 stringstream txSpentKey;
                 txSpentKey << "txo-" << txi.txHash << "-" << setw(8) << setfill('0') << txi.txoIndex << "-spent";
-                db->Put(leveldb::WriteOptions(), txSpentKey.str(), block.blockHash);
+                this->db->Put(leveldb::WriteOptions(), txSpentKey.str(), block.blockHash);
 
                 int nextIndex = getNextTxoIndex(block.blockHash + "-txospent");
                 stringstream blockTxoSpentKey;
                 blockTxoSpentKey << block.blockHash << "-txospent-" << setw(8) << setfill('0') << nextIndex;
-                db->Put(leveldb::WriteOptions(), blockTxoSpentKey.str(), txSpentKey.str());
+                this->db->Put(leveldb::WriteOptions(), blockTxoSpentKey.str(), txSpentKey.str());
             }
         }
     }

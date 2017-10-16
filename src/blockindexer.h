@@ -24,7 +24,8 @@
 
 #include <iostream>
 #include <fstream>
-
+#include "leveldb/db.h"
+#include "leveldb/write_batch.h"
 #include "blockchaintypes.h"
 
 namespace VtcBlockIndexer {
@@ -40,15 +41,7 @@ class BlockIndexer {
 public:
     /** Constructs a BlockIndexer instance using the given block data directory
      */
-    BlockIndexer();
-
-    /** Open the LevelDB database
-     */
-    bool open();
-
-    /** Closes the LevelDB database
-     */
-    bool close();
+    BlockIndexer(leveldb::DB* dbInstance);
 
     /** Indexes the contents of the block
      */
@@ -68,6 +61,8 @@ private:
     /** Returns the next index to use for storing the TXO
      */
     int getNextTxoIndex(std::string prefix);
+
+    leveldb::DB* db;
 };
 
 }

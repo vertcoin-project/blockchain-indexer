@@ -152,7 +152,7 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
     }
     else 
     {
-        return vector<unsigned char>(b58.get(), b58.get() + size);
+        return vector<unsigned char>(b58.get(), b58.get() + size-1); // -1 strips trailing 0 byte
     }
 }
 
