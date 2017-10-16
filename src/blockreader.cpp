@@ -101,7 +101,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
             txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
             blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
             txInput.index = input;
-            txInput.coinbase = (input == 0 && txHash == "0000000000000000000000000000000000000000000000000000000000000000" && txInput.txoIndex == 4294967295);
+            txInput.coinbase = (input == 0 && txInput.txHash == "0000000000000000000000000000000000000000000000000000000000000000" && txInput.txoIndex == 4294967295);
             transaction.inputs.push_back(txInput);
         }
         

@@ -84,7 +84,6 @@ bool VtcBlockIndexer::BlockIndexer::clearBlockTxos(string blockHash) {
     for (it->Seek(start);
             it->Valid() && it->key().ToString() < limit;
             it->Next()) {
-        cout << "Reorg. Deleting key [" << it->value().ToString() << "]";
         batch.Delete(it->value().ToString());           
     }
     assert(it->status().ok());  // Check for any errors found during the scan
@@ -96,7 +95,6 @@ bool VtcBlockIndexer::BlockIndexer::clearBlockTxos(string blockHash) {
     for (it->Seek(spentStart);
             it->Valid() && it->key().ToString() < spentLimit;
             it->Next()) {
-        cout << "Reorg. Deleting key [" << it->value().ToString() << "]";
         batch.Delete(it->value().ToString());           
     }
     assert(it->status().ok());  // Check for any errors found during the scan
