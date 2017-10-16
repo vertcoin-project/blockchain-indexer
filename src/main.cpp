@@ -215,7 +215,6 @@ int main(int argc, char* argv[]) {
         }
 
         blockHeight++;
-        if(blockHeight == 700000) blockHeight++;
         nextBlock = processedBlock;
         processedBlock = processNextBlock(nextBlock);
     }
