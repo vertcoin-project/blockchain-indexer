@@ -54,6 +54,7 @@ struct Transaction {
     vector<TransactionInput> inputs;
     vector<TransactionOutput> outputs;
     string txHash;
+    string txWitHash;
     uint32_t version;
     uint32_t lockTime;
 };
