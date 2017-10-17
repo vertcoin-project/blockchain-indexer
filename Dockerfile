@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM vtc-wallet-middleware-base
 
 RUN apt-get update
 
