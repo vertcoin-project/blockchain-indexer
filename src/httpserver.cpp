@@ -77,7 +77,7 @@ void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > se
     session->close( OK, body.str(), { { "Content-Length",  bodyLength.str() } } );
 }
 
-void VtcBlockIndexer::HttpServer::run( )
+void VtcBlockIndexer::HttpServer::run()
 {
     auto resource = make_shared< Resource >( );
     resource->set_path( "/addressBalance/{address: .*}" );
