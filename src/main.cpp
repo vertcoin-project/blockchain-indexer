@@ -39,7 +39,6 @@ using namespace std;
 
 
 leveldb::DB *db;
-const clock_t begin_time = clock();
 VtcBlockIndexer::HttpServer httpServer(nullptr);
 VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr);
 
