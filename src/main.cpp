@@ -43,8 +43,9 @@ VtcBlockIndexer::HttpServer httpServer(nullptr);
 VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr);
 
 void runBlockfileWatcher(string blocksDir) {
+    cout << "Starting blockfile watcher..." << endl;
     blockFileWatcher = VtcBlockIndexer::BlockFileWatcher(blocksDir, db);
-    blockFileWatcher.updateIndex();
+    blockFileWatcher.startWatcher();
 }
 
 

@@ -30,6 +30,9 @@
 #include "blockscanner.h"
 #include "blockindexer.h"
 #include "blockreader.h"
+#include <chrono>
+#include <thread>
+#include <time.h>
 
 VtcBlockIndexer::BlockReader blockReader("");
 VtcBlockIndexer::BlockIndexer blockIndexer(nullptr);
@@ -41,12 +44,50 @@ VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::D
     blockIndexer = VtcBlockIndexer::BlockIndexer(this->db);
     blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     this->blocksDir = blocksDir;
+    this->maxLastModified.tv_sec = 0;
+    this->maxLastModified.tv_nsec = 0;
 }
 
 
 
 void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
+    DIR *dir;
+    dirent *ent;
 
+    while(true) {
+        cout << "Checking blockdir [" << this->blocksDir << "] for modifications..." << endl;
+        bool shouldUpdate = false;
+        dir = opendir(&*this->blocksDir.begin());
+        while ((ent = readdir(dir)) != NULL) {
+            const string file_name = ent->d_name;
+            struct stat result;
+            // Check if the filename starts with "blk"
+            string prefix = "blk"; 
+            if(strncmp(file_name.c_str(), prefix.c_str(), prefix.size()) == 0)
+            {
+                stringstream fullPath;
+                fullPath << this->blocksDir << "/" << file_name;
+                if(stat(fullPath.str().c_str(), &result)==0)
+                {
+                    if(result.st_mtim.tv_sec > this->maxLastModified.tv_sec) {
+                        this->maxLastModified = result.st_mtim;
+                        cout << "File [" << file_name << "] modified. Starting index update." << endl;
+                        shouldUpdate = true;
+                    }
+                }
+            }
+        }
+
+        closedir(dir);
+
+        if(shouldUpdate) { 
+            updateIndex();
+        } else {
+            cout << "No modifications found." << endl;
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+    }
 }
 
 void VtcBlockIndexer::BlockFileWatcher::scanBlocks(string fileName) {
@@ -185,6 +226,10 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
 
 
 void VtcBlockIndexer::BlockFileWatcher::updateIndex() {
+    
+    time_t start;
+    time(&start);  
+   
     this->blockHeight = 0;
     this->totalBlocks = 0;
     cout << "Scanning blocks..." << endl;
@@ -196,14 +241,19 @@ void VtcBlockIndexer::BlockFileWatcher::updateIndex() {
     // The blockchain starts with the genesis block that has a zero hash as Previous Block Hash
     string nextBlock = "0000000000000000000000000000000000000000000000000000000000000000";
     string processedBlock = processNextBlock(nextBlock);
+    double nextUpdate = 10;
     while(processedBlock != "") {
-        this->blockHeight++;
-        if(this->blockHeight % 10000 == 0) { 
+        double seconds = difftime(time(NULL), start);
+        if(seconds >= nextUpdate) { 
+            nextUpdate += 10;
             cout << "Construction is at height " << this->blockHeight << endl;
         }
+        this->blockHeight++;
         nextBlock = processedBlock;
         processedBlock = processNextBlock(nextBlock);
     }
 
     cout << "Done. Processed " << this->blockHeight << " blocks. Have a nice day." << endl;
+
+    this->blocks.clear();
 }
