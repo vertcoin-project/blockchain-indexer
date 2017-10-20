@@ -2,9 +2,9 @@ FROM vtc-wallet-middleware-base
 
 RUN apt-get update
 
-COPY install.sh /root/install.sh
+ADD src /root/sources/vtc-wallet-middleware-cpp/src
+ADD Makefile /root/sources/vtc-wallet-middleware-cpp/Makefile
 
-RUN /root/install.sh
-
+RUN make -C /root/sources/vtc-wallet-middleware-cpp
 
 
