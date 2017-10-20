@@ -2,9 +2,15 @@ FROM vtc-wallet-middleware-base
 
 RUN apt-get update
 
-COPY install.sh /root/install.sh
+RUN mkdir /root/sources
 
-RUN /root/install.sh
+COPY . /root/sources
+
+WORKDIR /root/sources
+
+RUN make
+
+CMD ["/root/sources/vtc_indexer","/blocks"]
 
 
 
