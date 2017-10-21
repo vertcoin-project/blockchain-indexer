@@ -63,5 +63,5 @@ cd vertcoin/src/secp256k1
 make
 make install 
 
-
+ldconfig
 

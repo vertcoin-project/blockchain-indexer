@@ -1,4 +1,3 @@
-#include "filereader.h"
 /*  VTC Blockindexer - A utility to build additional indexes to the 
     Vertcoin blockchain by scanning and indexing the blockfiles
     downloaded by Vertcoin Core.
