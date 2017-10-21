@@ -29,6 +29,8 @@
 #include <ctime>
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+#include "leveldb/filter_policy.h"
+#include "leveldb/cache.h"
 #include "utility.h"
 #include "blockchaintypes.h"
 #include "httpserver.h"
@@ -59,6 +61,8 @@ int main(int argc, char* argv[]) {
 
     leveldb::Options options;
     options.create_if_missing = true;
+    options.block_cache = leveldb::NewLRUCache(300 * 1024 * 1024);
+    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
     leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
     assert(status.ok());
 
