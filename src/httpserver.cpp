@@ -27,9 +27,11 @@
 #include <memory>
 #include <cstdlib>
 #include <restbed>
+#include "json.hpp"
 
 using namespace std;
 using namespace restbed;
+using json = nlohmann::json;
 
 VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance) {
     this->db = dbInstance;
@@ -76,17 +78,78 @@ void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > se
     session->close( OK, body.str(), { { "Content-Length",  bodyLength.str() } } );
 }
 
+void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > session )
+{
+    json j = json::array();
+
+    const auto request = session->get_request( );
+
+    long long sinceBlock = stoll(request->get_path_parameter( "sinceBlock", "0" ));
+    
+    cout << "Checking balance for address " << request->get_path_parameter( "address" ) << endl;
+
+    string start(request->get_path_parameter( "address" ) + "-txo-00000001");
+    string limit(request->get_path_parameter( "address" ) + "-txo-99999999");
+    
+    leveldb::Iterator* it = this->db->NewIterator(leveldb::ReadOptions());
+    
+    for (it->Seek(start);
+            it->Valid() && it->key().ToString() < limit;
+            it->Next()) {
+
+        string spentTx;
+        string txo = it->value().ToString();
+
+        leveldb::Status s = this->db->Get(leveldb::ReadOptions(), "txo-" + txo.substr(0,64) + "-" + txo.substr(64,8) + "-spent", &spentTx);
+        if(!s.ok()) // no key found, not spent. Add balance.
+        {
+            long long block = stoll(txo.substr(72,8));
+            if(block >= sinceBlock) {
+                json txoObj;
+                txoObj["txhash"] = txo.substr(0,64);
+                txoObj["vout"] = stoll(txo.substr(64,8));
+                txoObj["block"] = block;
+                txoObj["value"] = stoll(txo.substr(80));
+                j.push_back(txoObj);
+            }
+        }
+    }
+    assert(it->status().ok());  // Check for any errors found during the scan
+    delete it;
+
+
+    string body = j.dump();
+
+    stringstream bodyLength;
+    bodyLength << body.size();
+     
+    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  bodyLength.str() } } );
+}
+
+
+
 void VtcBlockIndexer::HttpServer::run()
 {
-    auto resource = make_shared< Resource >( );
-    resource->set_path( "/addressBalance/{address: .*}" );
-    resource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressBalance, this, std::placeholders::_1) );
+    auto addressBalanceResource = make_shared< Resource >( );
+    addressBalanceResource->set_path( "/addressBalance/{address: .*}" );
+    addressBalanceResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressBalance, this, std::placeholders::_1) );
+
+    auto addressTxosResource = make_shared< Resource >( );
+    addressTxosResource->set_path( "/addressTxos/{address: .*}" );
+    addressTxosResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressTxos, this, std::placeholders::_1) );
+
+    auto addressTxosSinceBlockResource = make_shared< Resource >( );
+    addressTxosSinceBlockResource->set_path( "/addressTxosSince/{sinceBlock: ^[0-9]*$}/{address: .*}" );
+    addressTxosSinceBlockResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressTxos, this, std::placeholders::_1) );
+
 
     auto settings = make_shared< Settings >( );
     settings->set_port( 8888 );
     settings->set_default_header( "Connection", "close" );
 
     Service service;
-    service.publish( resource );
+    service.publish( addressBalanceResource );
+    service.publish( addressTxosResource );
+    service.publish( addressTxosSinceBlockResource );
     service.start( settings );
 }
