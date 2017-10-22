@@ -19,3 +19,4 @@ RUN ./configure
 RUN make
 RUN make install 
 
+RUN ldconfig
