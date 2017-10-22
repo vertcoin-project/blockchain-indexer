@@ -23,7 +23,7 @@
 
 #include <stdlib.h>
 #include <vector>
-#include <ck/ckmath.h>
+
 using namespace std;
 
 namespace VtcBlockIndexer {
