@@ -36,25 +36,25 @@ using json = nlohmann::json;
 VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance) {
     this->db = dbInstance;
     
-    jsonrpc::HttpClient httpclient("http://vertcoinrpc:password@127.0.0.1:5888");
-    vertcoind.reset(new VertcoinClient(httpclient));
+    httpClient.reset(new jsonrpc::HttpClient("http://vertcoinrpc:password@127.0.0.1:5888"));
+    vertcoind.reset(new VertcoinClient(*httpClient));
 }
 
 void VtcBlockIndexer::HttpServer::getTransaction(const shared_ptr<Session> session) {
     const auto request = session->get_request();
     
+    cout << "Looking up txid " << request->get_path_parameter("id") << endl;
+    
     try {
-        const Json::Value tx = client.getrawtransaction(request->get_path_parameter("id"), false);
+        const Json::Value tx = vertcoind->getrawtransaction(request->get_path_parameter("id"), false);
         
         stringstream body;
         body << tx.toStyledString();
         
-        stringstream bodyLength;
-        bodyLength << body.str().size();
-        
-        session->close(OK, body.str(), {{"Content-Length",  bodyLength.str()}});
+        session->close(OK, body.str(), {{"Content-Length",  std::to_string(body.str().size())}});
     } catch(const jsonrpc::JsonRpcException& e) {
         const std::string message(e.what());
+        cout << "Not found " << message << endl;
         session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
     }
 }
@@ -163,6 +163,10 @@ void VtcBlockIndexer::HttpServer::run()
     auto addressTxosSinceBlockResource = make_shared< Resource >( );
     addressTxosSinceBlockResource->set_path( "/addressTxosSince/{sinceBlock: ^[0-9]*$}/{address: .*}" );
     addressTxosSinceBlockResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressTxos, this, std::placeholders::_1) );
+    
+    auto getTransctionResource = make_shared<Resource>();
+    getTransctionResource->set_path( "/getTransaction/{id: [0-9a-f]*}" );
+    getTransctionResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransaction, this, std::placeholders::_1) );
 
 
     auto settings = make_shared< Settings >( );
@@ -173,5 +177,6 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( addressBalanceResource );
     service.publish( addressTxosResource );
     service.publish( addressTxosSinceBlockResource );
+    service.publish( getTransctionResource );
     service.start( settings );
 }

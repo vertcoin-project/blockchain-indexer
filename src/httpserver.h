@@ -22,6 +22,8 @@
 */
 
 #include <restbed>
+#include <jsonrpccpp/client/connectors/httpclient.h>
+
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
 
@@ -44,10 +46,12 @@ namespace VtcBlockIndexer {
             void run();
             void addressBalance( const shared_ptr< Session > session );
             void addressTxos( const shared_ptr< Session > session );
+            void getTransaction(const shared_ptr<Session> session);
             
         private:
             leveldb::DB* db;
             std::unique_ptr<VertcoinClient> vertcoind;
+            std::unique_ptr<jsonrpc::HttpClient> httpClient;
 
     };
 }

@@ -1,4 +1,4 @@
-#infdef VERTCOINRPC_INCLUDED_
+#ifndef VERTCOINRPC_INCLUDED_
 #define VERTCOINRPC_INCLUDED_
 
 #include <jsonrpccpp/client.h>
@@ -9,8 +9,7 @@ namespace VtcBlockIndexer {
             VertcoinClient(jsonrpc::IClientConnector &conn,
                            jsonrpc::clientVersion_t type 
                            = jsonrpc::JSONRPC_CLIENT_V1) : 
-                           jsonrpc::Client(conn
-                                           type) {}
+                           jsonrpc::Client(conn, type) {}
                                      
             Json::Value getrawtransaction(const std::string& id, const bool hex) 
             throw (jsonrpc::JsonRpcException) {
