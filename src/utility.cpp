@@ -23,7 +23,6 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
-#include <ck/ckmath.h>
 #include <iomanip>
 #include <vector>
 #include <secp256k1.h>

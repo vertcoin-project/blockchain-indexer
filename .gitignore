@@ -1,3 +1,4 @@
 *.o
 vtc_indexer
 .vscode/
+build_and_restart.sh

@@ -40,6 +40,7 @@ namespace VtcBlockIndexer {
             HttpServer(leveldb::DB* dbInstance);
             void run();
             void addressBalance( const shared_ptr< Session > session );
+            void addressTxos( const shared_ptr< Session > session );
             
         private:
             leveldb::DB* db;

@@ -1,16 +1,11 @@
 FROM vtc-wallet-middleware-base
 
-RUN apt-get update
+ADD src /root/sources/vtc-wallet-middleware-cpp/src
+ADD Makefile /root/sources/vtc-wallet-middleware-cpp/Makefile
 
-RUN mkdir /root/sources
+RUN make clean -C /root/sources/vtc-wallet-middleware-cpp
+RUN make -C /root/sources/vtc-wallet-middleware-cpp
 
-COPY . /root/sources
-
-WORKDIR /root/sources
-
-RUN make
-
-CMD ["/root/sources/vtc_indexer","/blocks"]
-
+CMD ["/root/sources/vtc-wallet-middleware-cpp/vtc_indexer", "/blocks"]
 
 

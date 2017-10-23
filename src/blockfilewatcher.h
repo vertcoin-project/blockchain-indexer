@@ -64,6 +64,7 @@ private:
     int totalBlocks;
     int blockHeight;
     unordered_map<string, vector<VtcBlockIndexer::ScannedBlock>> blocks;    
+    struct timespec maxLastModified;
 }; 
 
 }
