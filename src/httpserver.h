@@ -24,6 +24,9 @@
 #include <restbed>
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+
+#include "vertcoinrpc.h"
+
 using namespace std;
 using namespace restbed;
 
@@ -44,6 +47,7 @@ namespace VtcBlockIndexer {
             
         private:
             leveldb::DB* db;
+            std::unique_ptr<VertcoinClient> vertcoind;
 
     };
 }
