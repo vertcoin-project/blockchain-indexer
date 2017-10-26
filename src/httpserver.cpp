@@ -36,7 +36,7 @@ using json = nlohmann::json;
 VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance) {
     this->db = dbInstance;
     
-    httpClient.reset(new jsonrpc::HttpClient("http://vertcoinrpc:password@127.0.0.1:5888"));
+    httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@vertcoind:8332"));
     vertcoind.reset(new VertcoinClient(*httpClient));
 }
 
@@ -46,7 +46,7 @@ void VtcBlockIndexer::HttpServer::getTransaction(const shared_ptr<Session> sessi
     cout << "Looking up txid " << request->get_path_parameter("id") << endl;
     
     try {
-        const Json::Value tx = vertcoind->getrawtransaction(request->get_path_parameter("id"), false);
+        const Json::Value tx = vertcoind->getrawtransaction(request->get_path_parameter("id"), true);
         
         stringstream body;
         body << tx.toStyledString();

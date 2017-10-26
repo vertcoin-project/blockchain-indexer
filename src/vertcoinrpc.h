@@ -11,13 +11,13 @@ namespace VtcBlockIndexer {
                            = jsonrpc::JSONRPC_CLIENT_V1) : 
                            jsonrpc::Client(conn, type) {}
                                      
-            Json::Value getrawtransaction(const std::string& id, const bool hex) 
+            Json::Value getrawtransaction(const std::string& id, const bool verbose) 
             throw (jsonrpc::JsonRpcException) {
                 Json::Value p;
                 p.append(id);
-                p.append(hex);
+                p.append(verbose);
                 const Json::Value result = this->CallMethod("getrawtransaction", p);
-                if(result.isObject()) {
+                if((result.isObject() && verbose) || (result.isString() && !verbose)) {
                     return result;
                 } else {
                     throw jsonrpc::JsonRpcException(jsonrpc::Errors::ERROR_CLIENT_INVALID_RESPONSE,
