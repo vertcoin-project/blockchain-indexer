@@ -9,7 +9,7 @@ services:
       - "8333:8333"
     volumes:
       - ./data/vertcoind:/data
-    command: -rpcuser=middleware -rpcpassword=middleware
+    command: -rpcuser=middleware -rpcpassword=middleware -txindex
 
   vtc-middleware-cpp:
     image: jamesl22/vtc-middleware-cpp
