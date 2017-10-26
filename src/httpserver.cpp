@@ -123,17 +123,19 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
         string txo = it->value().ToString();
 
         leveldb::Status s = this->db->Get(leveldb::ReadOptions(), "txo-" + txo.substr(0,64) + "-" + txo.substr(64,8) + "-spent", &spentTx);
-        if(!s.ok()) // no key found, not spent. Add balance.
-        {
-            long long block = stoll(txo.substr(72,8));
-            if(block >= sinceBlock) {
-                json txoObj;
-                txoObj["txhash"] = txo.substr(0,64);
-                txoObj["vout"] = stoll(txo.substr(64,8));
-                txoObj["block"] = block;
-                txoObj["value"] = stoll(txo.substr(80));
-                j.push_back(txoObj);
+        long long block = stoll(txo.substr(72,8));
+        if(block >= sinceBlock) {
+            json txoObj;
+            txoObj["txhash"] = txo.substr(0,64);
+            txoObj["vout"] = stoll(txo.substr(64,8));
+            txoObj["block"] = block;
+            txoObj["value"] = stoll(txo.substr(80));
+            if(!s.ok()) {
+                txoObj["spender"] = nullptr;
+            } else {
+                txoObj["spender"] = spentTx.substr(64, 128);
             }
+            j.push_back(txoObj);
         }
     }
     assert(it->status().ok());  // Check for any errors found during the scan

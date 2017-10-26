@@ -145,7 +145,11 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
             {
                 stringstream txSpentKey;
                 txSpentKey << "txo-" << txi.txHash << "-" << setw(8) << setfill('0') << txi.txoIndex << "-spent";
-                this->db->Put(leveldb::WriteOptions(), txSpentKey.str(), block.blockHash);
+                
+                stringstream spendingTx;
+                spendingTx << block.blockHash << "-" << tx.txHash;
+                
+                this->db->Put(leveldb::WriteOptions(), txSpentKey.str(), spendingTx.str());
 
                 int nextIndex = getNextTxoIndex(block.blockHash + "-txospent");
                 stringstream blockTxoSpentKey;
