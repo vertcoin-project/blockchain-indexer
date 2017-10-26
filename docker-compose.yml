@@ -12,9 +12,9 @@ services:
     command: -rpcuser=middleware -rpcpassword=middleware -txindex
 
   vtc-middleware-cpp:
-    image: jamesl22/vtc-middleware-cpp
+    image: vtc-wallet-middleware
     expose:
       - "8888"
     volumes:
       - ./data/vertcoind/blocks:/blocks
-      - ./data/index:/tmp/tempdb
+      - ./data/index:/tmp/testdb
