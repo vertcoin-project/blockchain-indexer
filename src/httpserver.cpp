@@ -35,6 +35,28 @@ using json = nlohmann::json;
 
 VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance) {
     this->db = dbInstance;
+    
+    httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@vertcoind:8332"));
+    vertcoind.reset(new VertcoinClient(*httpClient));
+}
+
+void VtcBlockIndexer::HttpServer::getTransaction(const shared_ptr<Session> session) {
+    const auto request = session->get_request();
+    
+    cout << "Looking up txid " << request->get_path_parameter("id") << endl;
+    
+    try {
+        const Json::Value tx = vertcoind->getrawtransaction(request->get_path_parameter("id"), true);
+        
+        stringstream body;
+        body << tx.toStyledString();
+        
+        session->close(OK, body.str(), {{"Content-Length",  std::to_string(body.str().size())}});
+    } catch(const jsonrpc::JsonRpcException& e) {
+        const std::string message(e.what());
+        cout << "Not found " << message << endl;
+        session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
+    }
 }
 
 void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > session )
@@ -101,17 +123,19 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
         string txo = it->value().ToString();
 
         leveldb::Status s = this->db->Get(leveldb::ReadOptions(), "txo-" + txo.substr(0,64) + "-" + txo.substr(64,8) + "-spent", &spentTx);
-        if(!s.ok()) // no key found, not spent. Add balance.
-        {
-            long long block = stoll(txo.substr(72,8));
-            if(block >= sinceBlock) {
-                json txoObj;
-                txoObj["txhash"] = txo.substr(0,64);
-                txoObj["vout"] = stoll(txo.substr(64,8));
-                txoObj["block"] = block;
-                txoObj["value"] = stoll(txo.substr(80));
-                j.push_back(txoObj);
+        long long block = stoll(txo.substr(72,8));
+        if(block >= sinceBlock) {
+            json txoObj;
+            txoObj["txhash"] = txo.substr(0,64);
+            txoObj["vout"] = stoll(txo.substr(64,8));
+            txoObj["block"] = block;
+            txoObj["value"] = stoll(txo.substr(80));
+            if(!s.ok()) {
+                txoObj["spender"] = nullptr;
+            } else {
+                txoObj["spender"] = spentTx.substr(64, 128);
             }
+            j.push_back(txoObj);
         }
     }
     assert(it->status().ok());  // Check for any errors found during the scan
@@ -141,6 +165,10 @@ void VtcBlockIndexer::HttpServer::run()
     auto addressTxosSinceBlockResource = make_shared< Resource >( );
     addressTxosSinceBlockResource->set_path( "/addressTxosSince/{sinceBlock: ^[0-9]*$}/{address: .*}" );
     addressTxosSinceBlockResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressTxos, this, std::placeholders::_1) );
+    
+    auto getTransctionResource = make_shared<Resource>();
+    getTransctionResource->set_path( "/getTransaction/{id: [0-9a-f]*}" );
+    getTransctionResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransaction, this, std::placeholders::_1) );
 
 
     auto settings = make_shared< Settings >( );
@@ -151,5 +179,6 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( addressBalanceResource );
     service.publish( addressTxosResource );
     service.publish( addressTxosSinceBlockResource );
+    service.publish( getTransctionResource );
     service.start( settings );
 }
