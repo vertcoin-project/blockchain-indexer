@@ -1,0 +1,20 @@
+version: "2"
+services:
+
+  vertcoind:
+    image: lukechilds/vertcoind
+    expose:
+      - "8332"
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./data/vertcoind:/data
+    command: -rpcuser=middleware -rpcpassword=middleware
+
+  vtc-middleware-cpp:
+    image: jamesl22/vtc-middleware-cpp
+    expose:
+      - "8888"
+    volumes:
+      - ./data/vertcoind/blocks:/blocks
+      - ./data/index:/tmp/tempdb
