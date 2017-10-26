@@ -133,7 +133,7 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
             if(!s.ok()) {
                 txoObj["spender"] = nullptr;
             } else {
-                txoObj["spender"] = spentTx.substr(64, 128);
+                txoObj["spender"] = spentTx.substr(65, 64);
             }
             j.push_back(txoObj);
         }
