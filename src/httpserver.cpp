@@ -94,10 +94,7 @@ void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > se
     stringstream body;
     body << balance;
     
-    stringstream bodyLength;
-    bodyLength << body.str().size();
-
-    session->close( OK, body.str(), { { "Content-Length",  bodyLength.str() } } );
+    session->close( OK, body.str(), { { "Content-Length",  std::to_string(body.str().size()) } } );
 }
 
 void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > session )
@@ -143,12 +140,69 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
 
 
     string body = j.dump();
-
-    stringstream bodyLength;
-    bodyLength << body.size();
      
-    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  bodyLength.str() } } );
+    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
 }
+
+void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > session )
+{
+    json j;
+
+    const auto request = session->get_request( );
+
+    long long vout = stoll(request->get_path_parameter( "vout", "0" ));
+    stringstream txoId;
+    txoId << "txo-" << request->get_path_parameter("txid", "") << "-" << setw(8) << setfill('0') << vout << "-spent";
+    cout << "Checking outpoint spent " << txoId.str() << endl;
+    string spentTx;
+    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
+    j["spent"] = s.ok();
+    if(s.ok()) {
+        j["spender"] = spentTx.substr(65, 64);
+    } else {
+        cout << s.ToString() << endl;
+    }
+    string body = j.dump();
+     
+    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
+} 
+
+
+void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > session )
+{
+    const auto request = session->get_request( );
+    size_t content_length = 0;
+    content_length = request->get_header( "Content-Length", 0);
+    session->fetch( content_length, [ request, this ]( const shared_ptr< Session > session, const Bytes & body )
+    {
+        string content =string(body.begin(), body.end());
+        json output = json::array();
+        json input = json::parse(content);
+        if(!input.is_null()) {
+            for (auto& txo : input) {
+                if(txo.is_object() && txo["txid"].is_string() && txo["vout"].is_number()) {
+                    stringstream txoId;
+                    txoId << "txo-" << txo["txid"].get<string>() << "-" << setw(8) << setfill('0') << txo["vout"].get<int>() << "-spent";
+                    cout << "Checking outpoint spent " << txoId.str() << endl;
+            
+                    
+                    string spentTx;
+                    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
+                    if(s.ok()) {
+                        json j;
+                        j["txid"] = txo["txid"];
+                        j["vout"] = txo["vout"];
+                        j["spender"] = spentTx.substr(65, 64);
+                        output.push_back(j);
+                    }
+                }
+            }
+        }
+    
+        string resultBody = output.dump();
+        session->close( OK, resultBody, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(resultBody.size()) } } );
+    } );
+} 
 
 
 
@@ -166,9 +220,17 @@ void VtcBlockIndexer::HttpServer::run()
     addressTxosSinceBlockResource->set_path( "/addressTxosSince/{sinceBlock: ^[0-9]*$}/{address: .*}" );
     addressTxosSinceBlockResource->set_method_handler( "GET", bind( &VtcBlockIndexer::HttpServer::addressTxos, this, std::placeholders::_1) );
     
-    auto getTransctionResource = make_shared<Resource>();
-    getTransctionResource->set_path( "/getTransaction/{id: [0-9a-f]*}" );
-    getTransctionResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransaction, this, std::placeholders::_1) );
+    auto getTransactionResource = make_shared<Resource>();
+    getTransactionResource->set_path( "/getTransaction/{id: [0-9a-f]*}" );
+    getTransactionResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransaction, this, std::placeholders::_1) );
+
+    auto outpointSpendResource = make_shared<Resource>();
+    outpointSpendResource->set_path( "/outpointSpend/{txid: [0-9a-f]*}/{vout: [0-9]*}" );
+    outpointSpendResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::outpointSpend, this, std::placeholders::_1) );
+
+    auto outpointSpendsResource = make_shared<Resource>();
+    outpointSpendsResource->set_path( "/outpointSpends" );
+    outpointSpendsResource->set_method_handler("POST", bind(&VtcBlockIndexer::HttpServer::outpointSpends, this, std::placeholders::_1) );
 
 
     auto settings = make_shared< Settings >( );
@@ -179,6 +241,8 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( addressBalanceResource );
     service.publish( addressTxosResource );
     service.publish( addressTxosSinceBlockResource );
-    service.publish( getTransctionResource );
+    service.publish( getTransactionResource );
+    service.publish( outpointSpendResource );
+    service.publish( outpointSpendsResource );
     service.start( settings );
 }

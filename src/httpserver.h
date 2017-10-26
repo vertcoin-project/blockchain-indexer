@@ -47,6 +47,8 @@ namespace VtcBlockIndexer {
             void addressBalance( const shared_ptr< Session > session );
             void addressTxos( const shared_ptr< Session > session );
             void getTransaction(const shared_ptr<Session> session);
+            void outpointSpend( const shared_ptr< Session > session );
+            void outpointSpends( const shared_ptr< Session > session );
             
         private:
             leveldb::DB* db;
