@@ -46,6 +46,10 @@ public:
      */
     Block readBlock(ScannedBlock block, uint64_t height);
 
+    /** Reads a transaction from an open file stream
+     */
+    Transaction readTransaction(std::ifstream& blockFile);
+
 private:
 
     /** Directory containing the blocks

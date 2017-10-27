@@ -32,7 +32,7 @@ struct ScannedBlock {
     string fileName;
 
     // The position inside the block file where the block header starts
-    int filePosition;
+    uint64_t filePosition;
 
     // The total size of the block
     uint32_t blockSize;
@@ -66,6 +66,9 @@ struct TransactionInput {
     
     // The index of the output inside the transaction being spent
     uint32_t txoIndex;
+
+    // Part of all transactions. A number intended to allow unconfirmed time-locked transactions to be updated before being finalized; not currently used except to disable locktime in a transaction
+    uint32_t sequence;
     
     // Indicating if this is a coinbase (Generated coins) input
     bool coinbase;
@@ -92,7 +95,7 @@ struct Transaction {
     string txWitHash;
 
     // Position inside the blockfile where this transaction starts
-    int filePosition;
+    uint64_t filePosition;
 
     // Version bit for the transaction
     uint32_t version;

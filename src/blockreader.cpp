@@ -65,105 +65,110 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
     
     fullBlock.transactions = {};
     for(uint64_t tx = 0; tx < txCount; tx++) {
-        bool segwit = false;
-
-        VtcBlockIndexer::Transaction transaction;
-
-        uint64_t startPosTx = blockFile.tellg();
-
-        blockFile.read(reinterpret_cast<char *>(&transaction.version), sizeof(transaction.version));
-
-        // determine if this is a segwit tx
-        // https://bitcoincore.org/en/segwit_wallet_dev/
-        unique_ptr<unsigned char> segwitMarker(new unsigned char[2]);
-        blockFile.read(reinterpret_cast<char *>(&segwitMarker.get()[0]) , 2);
-        segwit = (segwitMarker.get()[0] == 0x00 && segwitMarker.get()[1] != 0x00);
-        
-        // If the segwit marker is not found, the number of inputs is located in its place
-        // so rewind the stream to continue.
-        if(!segwit) blockFile.seekg(-2, ios_base::cur);
-        
-        uint64_t startPosInputs = blockFile.tellg();
-
-        transaction.inputs = {};
-
-        uint64_t inputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
-        
-        for(uint64_t input = 0; input < inputCount; input++) {
-            VtcBlockIndexer::TransactionInput txInput;
-            txInput.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::FileReader::readHash(blockFile));
-            blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
-            txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
-            blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
-            txInput.index = input;
-            txInput.coinbase = (input == 0 && txInput.txHash == "0000000000000000000000000000000000000000000000000000000000000000" && txInput.txoIndex == 4294967295);
-            transaction.inputs.push_back(txInput);
-        }
-        
-        uint64_t outputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
-        transaction.outputs = {};
-        for(uint64_t output = 0; output < outputCount; output++) {
-            VtcBlockIndexer::TransactionOutput txOutput;
-            blockFile.read(reinterpret_cast<char *>(&txOutput.value), sizeof(txOutput.value));
-            txOutput.script = VtcBlockIndexer::FileReader::readString(blockFile);
-            txOutput.index = output;
-            transaction.outputs.push_back(txOutput);
-        }
-
-        uint64_t endPosOutputs = blockFile.tellg();
-        
-
-        if(segwit) {
-            for(uint64_t input = 0; input < inputCount; input++) {
-                uint64_t witnessItems = VtcBlockIndexer::FileReader::readVarInt(blockFile);
-                if(witnessItems > 0) {
-                    transaction.inputs.at(input).witnessData = {};
-                    for(uint64_t witnessItem = 0; witnessItem < witnessItems; witnessItem++) {
-                        vector<unsigned char> witnessData = VtcBlockIndexer::FileReader::readString(blockFile);
-                        transaction.inputs.at(input).witnessData.push_back(witnessData);
-                    }
-                }
-            }
-        }
-
-        blockFile.read(reinterpret_cast<char *>(&transaction.lockTime), sizeof(transaction.lockTime));
-
-        uint64_t endPosTx = blockFile.tellg();
-
-        blockFile.seekg(startPosTx, ios_base::beg);
-
-        // The tx hash must still be calculated over the original serialization format.
-        // That's why this seems a bit overcomplex
-        uint64_t txitxoLength = endPosOutputs-startPosInputs;
-        std::vector<unsigned char> txHashBytes(
-            4 + // version
-            txitxoLength +
-            4 // locktime
-        );
-        
-        blockFile.read(reinterpret_cast<char *>(&txHashBytes[0]), sizeof(transaction.version));
-        
-        blockFile.seekg(startPosInputs, ios_base::beg);
-        blockFile.read(reinterpret_cast<char *>(&txHashBytes[0] + 4), txitxoLength);
-        
-        blockFile.seekg(endPosTx-4, ios_base::beg);
-        blockFile.read(reinterpret_cast<char *>(&txHashBytes[0] + 4 + txitxoLength), sizeof(transaction.lockTime));
-        transaction.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(txHashBytes)));
-
-        if(segwit) {
-            blockFile.seekg(startPosTx, ios_base::beg);
-            uint64_t length = endPosTx-startPosTx;
-            std::vector<unsigned char> transactionBytes(length);
-            blockFile.read(reinterpret_cast<char *>(&transactionBytes[0]) , length);
-            transaction.txWitHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(transactionBytes)));
-        } else {
-            transaction.txWitHash = string(transaction.txHash);
-        }
-        blockFile.seekg(endPosTx, ios_base::beg);
-        
+        VtcBlockIndexer::Transaction transaction = readTransaction(blockFile);
         fullBlock.transactions.push_back(transaction);
     }
     blockFile.close();
     return fullBlock;
+}
+
+VtcBlockIndexer::Transaction VtcBlockIndexer::BlockReader::readTransaction(ifstream& blockFile) {
+    bool segwit = false;
+    
+    VtcBlockIndexer::Transaction transaction;
+    uint64_t startPosTx = blockFile.tellg();
+    
+    transaction.filePosition = startPosTx;
+    blockFile.read(reinterpret_cast<char *>(&transaction.version), sizeof(transaction.version));
+    
+    // determine if this is a segwit tx
+    // https://bitcoincore.org/en/segwit_wallet_dev/
+    unique_ptr<unsigned char> segwitMarker(new unsigned char[2]);
+    blockFile.read(reinterpret_cast<char *>(&segwitMarker.get()[0]) , 2);
+    segwit = (segwitMarker.get()[0] == 0x00 && segwitMarker.get()[1] != 0x00);
+    
+    // If the segwit marker is not found, the number of inputs is located in its place
+    // so rewind the stream to continue.
+    if(!segwit) blockFile.seekg(-2, ios_base::cur);
+    
+    uint64_t startPosInputs = blockFile.tellg();
+
+    transaction.inputs = {};
+
+    uint64_t inputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
+    
+    for(uint64_t input = 0; input < inputCount; input++) {
+        VtcBlockIndexer::TransactionInput txInput;
+        txInput.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::FileReader::readHash(blockFile));
+        blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
+        txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
+        blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
+        txInput.index = input;
+        txInput.coinbase = (input == 0 && txInput.txHash == "0000000000000000000000000000000000000000000000000000000000000000" && txInput.txoIndex == 4294967295);
+        transaction.inputs.push_back(txInput);
+    }
+    
+    uint64_t outputCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
+    transaction.outputs = {};
+    for(uint64_t output = 0; output < outputCount; output++) {
+        VtcBlockIndexer::TransactionOutput txOutput;
+        blockFile.read(reinterpret_cast<char *>(&txOutput.value), sizeof(txOutput.value));
+        txOutput.script = VtcBlockIndexer::FileReader::readString(blockFile);
+        txOutput.index = output;
+        transaction.outputs.push_back(txOutput);
+    }
+
+    uint64_t endPosOutputs = blockFile.tellg();
+    
+
+    if(segwit) {
+        for(uint64_t input = 0; input < inputCount; input++) {
+            uint64_t witnessItems = VtcBlockIndexer::FileReader::readVarInt(blockFile);
+            if(witnessItems > 0) {
+                transaction.inputs.at(input).witnessData = {};
+                for(uint64_t witnessItem = 0; witnessItem < witnessItems; witnessItem++) {
+                    vector<unsigned char> witnessData = VtcBlockIndexer::FileReader::readString(blockFile);
+                    transaction.inputs.at(input).witnessData.push_back(witnessData);
+                }
+            }
+        }
+    }
+
+    blockFile.read(reinterpret_cast<char *>(&transaction.lockTime), sizeof(transaction.lockTime));
+
+    uint64_t endPosTx = blockFile.tellg();
+
+    blockFile.seekg(startPosTx, ios_base::beg);
+
+    // The tx hash must still be calculated over the original serialization format.
+    // That's why this seems a bit overcomplex
+    uint64_t txitxoLength = endPosOutputs-startPosInputs;
+    std::vector<unsigned char> txHashBytes(
+        4 + // version
+        txitxoLength +
+        4 // locktime
+    );
+    
+    blockFile.read(reinterpret_cast<char *>(&txHashBytes[0]), sizeof(transaction.version));
+    
+    blockFile.seekg(startPosInputs, ios_base::beg);
+    blockFile.read(reinterpret_cast<char *>(&txHashBytes[0] + 4), txitxoLength);
+    
+    blockFile.seekg(endPosTx-4, ios_base::beg);
+    blockFile.read(reinterpret_cast<char *>(&txHashBytes[0] + 4 + txitxoLength), sizeof(transaction.lockTime));
+    transaction.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(txHashBytes)));
+
+    if(segwit) {
+        blockFile.seekg(startPosTx, ios_base::beg);
+        uint64_t length = endPosTx-startPosTx;
+        std::vector<unsigned char> transactionBytes(length);
+        blockFile.read(reinterpret_cast<char *>(&transactionBytes[0]) , length);
+        transaction.txWitHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(transactionBytes)));
+    } else {
+        transaction.txWitHash = string(transaction.txHash);
+    }
+    blockFile.seekg(endPosTx, ios_base::beg);
+
+    return transaction;
 }
   

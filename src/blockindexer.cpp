@@ -121,11 +121,41 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
         clearBlockTxos(existingBlockHash);
     }
     
-
+ 
     this->db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
+    
+    
+    stringstream ssBlockFilePositionKey;
+    ssBlockFilePositionKey << "block-filePosition-" << setw(8) << setfill('0') << block.height;
+    stringstream ssBlockFilePositionValue;
+    ssBlockFilePositionValue << block.fileName << setw(12) << setfill('0') << block.filePosition;
 
+    this->db->Put(leveldb::WriteOptions(), ssBlockFilePositionKey.str(), ssBlockFilePositionValue.str());
+    
+    stringstream ssBlockHashHeightKey;
+    ssBlockHashHeightKey << "block-hash-" << block.blockHash;
+    stringstream ssBlockHashHeightValue;
+    ssBlockHashHeightValue << setw(8) << setfill('0') << block.height;
+
+    this->db->Put(leveldb::WriteOptions(), ssBlockHashHeightKey.str(), ssBlockHashHeightValue.str());
+    
+    int txIndex = -1;
     // TODO: Verify block integrity
     for(VtcBlockIndexer::Transaction tx : block.transactions) {
+        txIndex++;
+        stringstream blockTxKey;
+        blockTxKey << "block-" << block.blockHash << "-tx-" << setw(8) << setfill('0') << txIndex;
+        this->db->Put(leveldb::WriteOptions(), blockTxKey.str(), tx.txHash);
+
+        stringstream ssTxFilePositionKey;
+        ssTxFilePositionKey << "tx-filePosition-" << tx.txHash;
+        stringstream ssTxFilePositionValue;
+        ssTxFilePositionValue << block.fileName << setw(12) << setfill('0') << tx.filePosition;
+    
+        this->db->Put(leveldb::WriteOptions(), ssTxFilePositionKey.str(), ssTxFilePositionValue.str());
+
+        
+
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
             for(string address : addresses) {
