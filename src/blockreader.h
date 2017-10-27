@@ -42,14 +42,18 @@ public:
      */
     BlockReader(const std::string blocksDir);
      
-    /** Reads the entire contents of the block that was scanned
+    /** Reads the contents of the block that was scanned
      */
-    Block readBlock(ScannedBlock block, uint64_t height);
+    Block readBlock(std::string fileName, uint64_t filePosition, uint64_t blockHeight, bool headerOnly);
 
     /** Reads a transaction from an open file stream
      */
     Transaction readTransaction(std::ifstream& blockFile);
 
+    /** Reads a transaction from an open file stream
+     */
+    std::vector<unsigned char> readRawBlockHeader(std::string fileName, uint64_t filePosition);        
+    
 private:
 
     /** Directory containing the blocks

@@ -41,7 +41,7 @@ using namespace std;
 
 
 leveldb::DB *db;
-VtcBlockIndexer::HttpServer httpServer(nullptr);
+VtcBlockIndexer::HttpServer httpServer(nullptr,"");
 VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr);
 
 void runBlockfileWatcher(string blocksDir) {
@@ -70,6 +70,6 @@ int main(int argc, char* argv[]) {
     std::thread watcherThread(runBlockfileWatcher, string(argv[1]));   
     
     // Start webserver on main thread.
-    httpServer = VtcBlockIndexer::HttpServer(db);
+    httpServer = VtcBlockIndexer::HttpServer(db, string(argv[1]));
     httpServer.run(); 
 }

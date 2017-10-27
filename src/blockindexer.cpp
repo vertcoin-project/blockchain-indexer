@@ -121,9 +121,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
         clearBlockTxos(existingBlockHash);
     }
     
- 
     this->db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
-    
     
     stringstream ssBlockFilePositionKey;
     ssBlockFilePositionKey << "block-filePosition-" << setw(8) << setfill('0') << block.height;
@@ -154,7 +152,10 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     
         this->db->Put(leveldb::WriteOptions(), ssTxFilePositionKey.str(), ssTxFilePositionValue.str());
 
-        
+        stringstream txBlockKey;
+        txBlockKey << "tx-" << tx.txHash << "-block";
+        this->db->Put(leveldb::WriteOptions(), txBlockKey.str(), block.blockHash);
+
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);

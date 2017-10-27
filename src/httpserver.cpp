@@ -28,14 +28,16 @@
 #include <cstdlib>
 #include <restbed>
 #include "json.hpp"
-
+#include "utility.h"
 using namespace std;
 using namespace restbed;
 using json = nlohmann::json;
 
-VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance) {
+
+VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance, string blocksDir) : blockReader("") {
     this->db = dbInstance;
-    
+    this->blocksDir = blocksDir;
+    this->blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@vertcoind:8332"));
     vertcoind.reset(new VertcoinClient(*httpClient));
 }
@@ -57,6 +59,67 @@ void VtcBlockIndexer::HttpServer::getTransaction(const shared_ptr<Session> sessi
         cout << "Not found " << message << endl;
         session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
     }
+}
+
+
+void VtcBlockIndexer::HttpServer::getTransactionProof(const shared_ptr<Session> session) {
+    const auto request = session->get_request();
+    
+    std::string blockHash;
+    std::string txId = request->get_path_parameter("id","");
+    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), "tx-" + txId + "-block", &blockHash);
+    if(!s.ok()) // no key found
+    {
+        const std::string message("TX not found");
+        session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
+        return;
+    }
+
+    std::string blockHeightString;
+    s = this->db->Get(leveldb::ReadOptions(), "block-hash-" + blockHash, &blockHeightString);
+    if(!s.ok()) // no key found
+    {
+        const std::string message("Block not found");
+        session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
+        return;
+    }
+    uint64_t blockHeight = stoll(blockHeightString);
+    json j;
+    j["txHash"] = txId;
+    j["blockHash"] = blockHash;
+    j["blockHeight"] = blockHeight;
+    json chain = json::array();
+    for(uint64_t i = blockHeight+1; --i > 0 && i > blockHeight-10;) {
+        stringstream blockKey;
+        blockKey << "block-filePosition-" << setw(8) << setfill('0') << i;
+   
+        std::string filePosition;
+        s = this->db->Get(leveldb::ReadOptions(), blockKey.str(), &filePosition);
+        if(!s.ok()) // no key found
+        {
+            const std::string message("Block not found");
+            session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
+            return;
+        }
+
+        Block block = this->blockReader.readBlock(filePosition.substr(0,12),stoll(filePosition.substr(12)),i,true);
+
+        json jsonBlock;
+        jsonBlock["blockHash"] = block.blockHash;
+        jsonBlock["previousBlockHash"] = block.previousBlockHash;
+        jsonBlock["merkleRoot"] = block.merkleRoot;
+        jsonBlock["version"] = block.version;
+        jsonBlock["time"] = block.time;
+        jsonBlock["bits"] = block.bits;
+        jsonBlock["nonce"] = block.nonce;
+        jsonBlock["height"] = block.height;
+        chain.push_back(jsonBlock);
+
+    }
+    j["chain"] = chain;
+    string body = j.dump();
+    
+   session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
 }
 
 void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > session )
@@ -224,6 +287,10 @@ void VtcBlockIndexer::HttpServer::run()
     getTransactionResource->set_path( "/getTransaction/{id: [0-9a-f]*}" );
     getTransactionResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransaction, this, std::placeholders::_1) );
 
+    auto getTransactionProofResource = make_shared<Resource>();
+    getTransactionProofResource->set_path( "/getTransactionProof/{id: [0-9a-f]*}" );
+    getTransactionProofResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransactionProof, this, std::placeholders::_1) );
+
     auto outpointSpendResource = make_shared<Resource>();
     outpointSpendResource->set_path( "/outpointSpend/{txid: [0-9a-f]*}/{vout: [0-9]*}" );
     outpointSpendResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::outpointSpend, this, std::placeholders::_1) );
@@ -242,6 +309,7 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( addressTxosResource );
     service.publish( addressTxosSinceBlockResource );
     service.publish( getTransactionResource );
+    service.publish( getTransactionProofResource );
     service.publish( outpointSpendResource );
     service.publish( outpointSpendsResource );
     service.start( settings );

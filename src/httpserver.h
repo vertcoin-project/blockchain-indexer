@@ -28,6 +28,9 @@
 #include "leveldb/write_batch.h"
 
 #include "vertcoinrpc.h"
+#include "blockreader.h"
+#include "scriptsolver.h"
+
 
 using namespace std;
 using namespace restbed;
@@ -42,7 +45,7 @@ namespace VtcBlockIndexer {
     
     class HttpServer {
         public:
-            HttpServer(leveldb::DB* dbInstance);
+            HttpServer(leveldb::DB* dbInstance, std::string blocksDir);
             void run();
             /* REST Api for returning the balance of a given address */
             void addressBalance( const shared_ptr< Session > session );
@@ -52,6 +55,9 @@ namespace VtcBlockIndexer {
             
             /* REST Api for returning the transaction details with a given hash */
             void getTransaction(const shared_ptr<Session> session);
+            
+            /* REST Api for returning the transaction proof for a given hash */
+            void getTransactionProof(const shared_ptr<Session> session);
             
             /* REST Api for returning if a given outpoint is spent (and if so, which TX spends it) */
             void outpointSpend( const shared_ptr< Session > session );
@@ -63,6 +69,12 @@ namespace VtcBlockIndexer {
             leveldb::DB* db;
             std::unique_ptr<VertcoinClient> vertcoind;
             std::unique_ptr<jsonrpc::HttpClient> httpClient;
+            VtcBlockIndexer::BlockReader blockReader;
+            VtcBlockIndexer::ScriptSolver scriptSolver;
+
+    /** Directory containing the blocks
+     */
+    std::string blocksDir; 
 
     };
 }

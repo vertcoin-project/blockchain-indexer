@@ -69,7 +69,7 @@ struct TransactionInput {
 
     // Part of all transactions. A number intended to allow unconfirmed time-locked transactions to be updated before being finalized; not currently used except to disable locktime in a transaction
     uint32_t sequence;
-    
+
     // Indicating if this is a coinbase (Generated coins) input
     bool coinbase;
     
@@ -122,6 +122,18 @@ struct Block {
 
     // The height of the block in the chain
     uint64_t height;
+
+    // Timestamp of the block
+    uint32_t time;
+
+    // encoded target threshold
+    uint32_t bits;
+
+    // Unique value to make the header hash match the target
+    uint32_t nonce;
+
+    // Version of the block
+    uint32_t version;
 
     // The list of transactions inside this block
     vector<Transaction> transactions;

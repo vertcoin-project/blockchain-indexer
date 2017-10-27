@@ -60,7 +60,6 @@ void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
     string blockFilePrefix = "blk"; 
     
     while(true) {
-        cout << "Checking blockdir [" << this->blocksDir << "] for modifications..." << endl;
         bool shouldUpdate = false;
         dir = opendir(&*this->blocksDir.begin());
         while ((ent = readdir(dir)) != NULL) {
@@ -76,7 +75,8 @@ void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
                 {
                     if(result.st_mtim.tv_sec > this->maxLastModified.tv_sec) {
                         this->maxLastModified = result.st_mtim;
-                        cout << "File [" << file_name << "] modified. Starting index update." << endl;
+                        if(!shouldUpdate)
+                            cout << "Change(s) detected, starting index update." << endl;
                         shouldUpdate = true;
                     }
                 }
@@ -205,7 +205,7 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
         } 
     
         if(!blockIndexer.hasIndexedBlock(bestBlock.blockHash, this->blockHeight)) {
-            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock, this->blockHeight);
+            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, false);
            
             blockIndexer.indexBlock(fullBlock);
         }
