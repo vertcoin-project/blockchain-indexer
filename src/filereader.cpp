@@ -60,19 +60,10 @@ uint64_t VtcBlockIndexer::FileReader::readVarInt(ifstream& stream)
     
 }
 
-
-
-
-string VtcBlockIndexer::FileReader::readHash(ifstream& stream) {
-    unique_ptr<unsigned char> hash(new unsigned char[32]);
-    stream.read(reinterpret_cast<char *>(&hash.get()[0]) , 32);
-    
-    stringstream ss;
-    for(int i = 0; i < 32; i++)
-    {
-        ss << hex << setw(2) << setfill('0') << (int)hash.get()[i];
-    }
-    return ss.str();
+vector<unsigned char> VtcBlockIndexer::FileReader::readHash(ifstream& stream) {
+    vector<unsigned char> data(32);
+    stream.read(reinterpret_cast<char *>(&data[0]) , 32);
+    return data;
 }
 
 vector<unsigned char> VtcBlockIndexer::FileReader::readString(ifstream& stream) {

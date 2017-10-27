@@ -31,7 +31,10 @@
 
 using namespace std;
 
+// This map keeps the nextTxoIndex in memory for speed - no database fetching on every TX
 unordered_map<string, int> nextTxoIndex;
+
+// Reference to the scriptsolver class
 VtcBlockIndexer::ScriptSolver* scriptSolver;
 
 VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance) {

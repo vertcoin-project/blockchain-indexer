@@ -44,10 +44,19 @@ namespace VtcBlockIndexer {
         public:
             HttpServer(leveldb::DB* dbInstance);
             void run();
+            /* REST Api for returning the balance of a given address */
             void addressBalance( const shared_ptr< Session > session );
+
+            /* REST Api for returning the TXOs on a given address */
             void addressTxos( const shared_ptr< Session > session );
+            
+            /* REST Api for returning the transaction details with a given hash */
             void getTransaction(const shared_ptr<Session> session);
+            
+            /* REST Api for returning if a given outpoint is spent (and if so, which TX spends it) */
             void outpointSpend( const shared_ptr< Session > session );
+            
+            /* REST Api for returning if a collection of given outpoints is spent (and if so, which TX spends it) */
             void outpointSpends( const shared_ptr< Session > session );
             
         private:

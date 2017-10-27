@@ -35,6 +35,7 @@ namespace VtcBlockIndexer {
              */
             static std::vector<unsigned char> sha256(std::vector<unsigned char> input);
             static std::string hashToHex(std::vector<unsigned char> hash);
+            static std::string hashToReverseHex(std::vector<unsigned char> hash);
             static std::vector<unsigned char> decompressPubKey(std::vector<unsigned char> compressedKey);
             static std::vector<unsigned char> publicKeyToAddress(std::vector<unsigned char> publicKey);
             static std::vector<unsigned char> ripeMD160(std::vector<unsigned char> in);

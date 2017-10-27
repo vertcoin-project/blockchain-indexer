@@ -36,11 +36,12 @@ namespace VtcBlockIndexer {
              */   
             static uint64_t readVarInt(std::ifstream& stream);
 
-            /** Reads a hash (32 bytes) from the ifstream and returns it as hex encoded
+            /** Reads a hash (32 bytes) from the ifstream and returns it as vector<unsigned char>
+             *  use Utility::hashToHex or ::hashToReverseHex to convert it to hex
              * 
              * @param stream the stream to read from 
              */ 
-            static std::string readHash(std::ifstream& stream);
+            static std::vector<unsigned char> readHash(std::ifstream& stream);
 
             /** Reads a string (first a VarInt with the length, then the contents) from 
              * the ifstream and returns it as vector<char>

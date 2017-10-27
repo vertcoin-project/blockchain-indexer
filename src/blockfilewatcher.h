@@ -56,8 +56,27 @@ private:
      * @param fileName The file name of the BLK????.DAT to scan for blocks.
      */
     void scanBlocks(std::string fileName);
+
+    /** Scans a folder for block files present and passes them to the scanBlocks
+     * method
+     * 
+     * @param dirPath The directory to scan for blockfiles.
+     */
     void scanBlockFiles(std::string dirName);
-    VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks);      
+
+    /** Orphaned blocks stay in the blockfiles. So this method is created to find out which of the canditate follow-up blocks
+     * chain of work behind it.
+     * @param matchingBlocks The blocks that should be investigated.
+     */
+    VtcBlockIndexer::ScannedBlock findLongestChain(std::vector<VtcBlockIndexer::ScannedBlock> matchingBlocks); 
+   
+    /** Finds the next block in line (by matching the prevBlockHash which is the
+     * key in the unordered_map). Then uses the block processor to do the indexing.
+     * Returns the hash of the block that was processed.
+     * 
+     * @param prevBlockHash the hex hash of the block that was last processed that we should
+     * extend the chain onto.
+     */     
     std::string processNextBlock(std::string prevBlockHash);
     std::string blocksDir;
     leveldb::DB* db;

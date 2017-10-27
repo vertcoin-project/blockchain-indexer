@@ -40,6 +40,8 @@ VtcBlockIndexer::BlockReader::BlockReader(const string blocksDir) {
 VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock block, uint64_t blockHeight) {
     VtcBlockIndexer::Block fullBlock;
 
+    fullBlock.fileName = block.fileName;
+    fullBlock.filePosition = block.filePosition;
     fullBlock.height = blockHeight;
     fullBlock.previousBlockHash = block.previousBlockHash;
     fullBlock.blockHash = block.blockHash;
@@ -49,21 +51,13 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
     ifstream blockFile(ss.str(), ios_base::in | ios_base::binary);
     
     if(!blockFile.is_open()) {
-        cerr << "Block file could not be opened";
+        cerr << "Block file could not be opened" << endl;
         exit(0);
     }
 
     // Seek to the start of the merkle root (we didn't read that while scanning)
     blockFile.seekg(block.filePosition+36, ios_base::beg);
-    unique_ptr<unsigned char> merkleRoot(new unsigned char[32]);
-    blockFile.read(reinterpret_cast<char *>(&merkleRoot.get()[0]) , 32);
-
-    stringstream ssMR;
-    for(int i = 0; i < 32; i++)
-    {
-        ssMR << hex << setw(2) << setfill('0') << (int)merkleRoot.get()[i];
-    }
-    fullBlock.merkleRoot = ssMR.str();
+    fullBlock.merkleRoot = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::FileReader::readHash(blockFile));
 
     // Find number of transactions
     blockFile.seekg(block.filePosition+80, ios_base::beg);
@@ -97,7 +91,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         
         for(uint64_t input = 0; input < inputCount; input++) {
             VtcBlockIndexer::TransactionInput txInput;
-            txInput.txHash = VtcBlockIndexer::FileReader::readHash(blockFile);
+            txInput.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::FileReader::readHash(blockFile));
             blockFile.read(reinterpret_cast<char *>(&txInput.txoIndex), sizeof(txInput.txoIndex));
             txInput.script = VtcBlockIndexer::FileReader::readString(blockFile);
             blockFile.read(reinterpret_cast<char *>(&txInput.sequence), sizeof(txInput.sequence));
@@ -154,14 +148,14 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
         
         blockFile.seekg(endPosTx-4, ios_base::beg);
         blockFile.read(reinterpret_cast<char *>(&txHashBytes[0] + 4 + txitxoLength), sizeof(transaction.lockTime));
-        transaction.txHash = VtcBlockIndexer::Utility::hashToHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(txHashBytes)));
+        transaction.txHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(txHashBytes)));
 
         if(segwit) {
             blockFile.seekg(startPosTx, ios_base::beg);
             uint64_t length = endPosTx-startPosTx;
             std::vector<unsigned char> transactionBytes(length);
             blockFile.read(reinterpret_cast<char *>(&transactionBytes[0]) , length);
-            transaction.txWitHash = VtcBlockIndexer::Utility::hashToHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(transactionBytes)));
+            transaction.txWitHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(transactionBytes)));
         } else {
             transaction.txWitHash = string(transaction.txHash);
         }

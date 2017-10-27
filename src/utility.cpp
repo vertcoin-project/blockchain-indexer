@@ -83,6 +83,16 @@ std::string VtcBlockIndexer::Utility::hashToHex(vector<unsigned char> hash) {
     return ss.str();
 }
 
+std::string VtcBlockIndexer::Utility::hashToReverseHex(vector<unsigned char> hash) {
+    if(hash.size() == 0) return "";
+    stringstream ss;
+    for(uint i = hash.size(); i-- > 0;)
+    {
+        ss << hex << setw(2) << setfill('0') << (int)hash.at(i);
+    }
+    return ss.str();
+}
+
 void VtcBlockIndexer::Utility::initECCContextIfNeeded() {
     if(secp256k1_context_verify == NULL) {
         secp256k1_context_verify = secp256k1_context_create(SECP256K1_FLAGS_TYPE_CONTEXT | SECP256K1_FLAGS_BIT_CONTEXT_VERIFY);

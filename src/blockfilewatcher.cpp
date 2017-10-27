@@ -34,11 +34,15 @@
 #include <thread>
 #include <time.h>
 
+// Block reader object used for reading the contents of blocks
 VtcBlockIndexer::BlockReader blockReader("");
+
+// Block indexer object used to pass blocks and store in the index
 VtcBlockIndexer::BlockIndexer blockIndexer(nullptr);
 
 using namespace std;
 
+// Constructor
 VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::DB* dbInstance) {
     this->db = dbInstance;
     blockIndexer = VtcBlockIndexer::BlockIndexer(this->db);
@@ -53,7 +57,8 @@ VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::D
 void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
     DIR *dir;
     dirent *ent;
-
+    string blockFilePrefix = "blk"; 
+    
     while(true) {
         cout << "Checking blockdir [" << this->blocksDir << "] for modifications..." << endl;
         bool shouldUpdate = false;
@@ -61,9 +66,9 @@ void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
         while ((ent = readdir(dir)) != NULL) {
             const string file_name = ent->d_name;
             struct stat result;
+
             // Check if the filename starts with "blk"
-            string prefix = "blk"; 
-            if(strncmp(file_name.c_str(), prefix.c_str(), prefix.size()) == 0)
+            if(strncmp(file_name.c_str(), blockFilePrefix.c_str(), blockFilePrefix.size()) == 0)
             {
                 stringstream fullPath;
                 fullPath << this->blocksDir << "/" << file_name;
@@ -82,8 +87,6 @@ void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
 
         if(shouldUpdate) { 
             updateIndex();
-        } else {
-            cout << "No modifications found." << endl;
         }
 
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -123,11 +126,7 @@ void VtcBlockIndexer::BlockFileWatcher::scanBlocks(string fileName) {
     }
 }
 
-/** Scans a folder for block files present and passes them to the scanBlocks
- * method
- * 
- * @param dirPath The directory to scan for blockfiles.
- */
+
 void VtcBlockIndexer::BlockFileWatcher::scanBlockFiles(string dirPath) {
     DIR *dir;
     dirent *ent;
@@ -145,6 +144,7 @@ void VtcBlockIndexer::BlockFileWatcher::scanBlockFiles(string dirPath) {
     }
     closedir(dir);
 }
+
 
 VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockFileWatcher::findLongestChain(vector<VtcBlockIndexer::ScannedBlock> matchingBlocks) {
     vector<string> nextBlockHashes;
@@ -184,13 +184,7 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockFileWatcher::findLongestChai
     }
 }
 
-/** Finds the next block in line (by matching the prevBlockHash which is the
- * key in the unordered_map). Then uses the block processor to do the indexing.
- * Returns the hash of the block that was processed.
- * 
- * @param prevBlockHash the hex hash of the block that was last processed that we should
- * extend the chain onto.
- */
+
 string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash) {
     
     
@@ -224,7 +218,6 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
     }
 }
 
-
 void VtcBlockIndexer::BlockFileWatcher::updateIndex() {
     
     time_t start;
@@ -243,6 +236,8 @@ void VtcBlockIndexer::BlockFileWatcher::updateIndex() {
     string processedBlock = processNextBlock(nextBlock);
     double nextUpdate = 10;
     while(processedBlock != "") {
+
+        // Show progress every 10 seconds
         double seconds = difftime(time(NULL), start);
         if(seconds >= nextUpdate) { 
             nextUpdate += 10;

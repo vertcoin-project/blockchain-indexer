@@ -67,11 +67,10 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     vector<unsigned char> blockHeader(80);
     this->blockFileStream.read(reinterpret_cast<char *>(&blockHeader[0]) , 80);
 
-    block.blockHash = VtcBlockIndexer::Utility::hashToHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(blockHeader)));
+    block.blockHash = VtcBlockIndexer::Utility::hashToReverseHex(VtcBlockIndexer::Utility::sha256(VtcBlockIndexer::Utility::sha256(blockHeader)));
     vector<unsigned char> previousBlockHash(32);
     memcpy(&previousBlockHash[0], &blockHeader[4], 32);
-
-    block.previousBlockHash =  VtcBlockIndexer::Utility::hashToHex(previousBlockHash);
+    block.previousBlockHash =  VtcBlockIndexer::Utility::hashToReverseHex(previousBlockHash);
     
     this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
     
