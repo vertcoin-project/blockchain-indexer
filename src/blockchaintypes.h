@@ -42,6 +42,9 @@ struct ScannedBlock {
 
     // The hash of the previous block used to form the chain. This string is the the "reverse hash" used on block explorers
     string previousBlockHash; 
+
+    // Contains true if the scanned block came from the testnet
+    bool testnet;
 };
 
 // Describes a transaction output inside a blockchain transaction
@@ -125,6 +128,9 @@ struct Block {
 
     // The list of transactions inside this block
     vector<Transaction> transactions;
+
+    // Indicates if this block is from the testnet
+    bool testnet;
 };
 
 

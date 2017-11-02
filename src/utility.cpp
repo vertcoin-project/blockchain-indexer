@@ -123,17 +123,17 @@ vector<unsigned char> VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned
 }     
 
 
-vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
+vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey, bool testnet) {
     vector<unsigned char> hashedKey = sha256(publicKey);
     vector<unsigned char> ripeMD = ripeMD160(hashedKey);
-    return ripeMD160ToP2PKAddress(ripeMD);
+    return ripeMD160ToP2PKAddress(ripeMD, testnet);
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD) {
-    return ripeMD160ToAddress(0x47, ripeMD);
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD, bool testnet) {
+    return ripeMD160ToAddress(testnet ? 0x4A : 0x47, ripeMD);
 }
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD) {
-    return ripeMD160ToAddress(0x05, ripeMD);
+vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD, bool testnet) {
+    return ripeMD160ToAddress(testnet ? 0xC4 : 0x05, ripeMD);
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD) {
@@ -165,11 +165,11 @@ vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
     }
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in) {
+vector<unsigned char> VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in, bool testnet) {
     vector<unsigned char> enc;
     enc.push_back(0); // witness version
     if(convertbits<8, 5, true>(enc, in)) {
-        string address = bech32::Encode("vtc", enc);
+        string address = bech32::Encode(testnet ? "tvtc" : "vtc", enc);
         return vector<unsigned char>(address.begin(), address.end());
     }
     else{
