@@ -27,6 +27,7 @@
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
 #include "blockchaintypes.h"
+#include "scriptsolver.h"
 
 namespace VtcBlockIndexer {
 
@@ -63,6 +64,9 @@ private:
     int getNextTxoIndex(std::string prefix);
 
     leveldb::DB* db;
+
+    // Reference to the scriptsolver class
+    VtcBlockIndexer::ScriptSolver scriptSolver;
 };
 
 }

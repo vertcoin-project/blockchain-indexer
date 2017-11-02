@@ -34,11 +34,11 @@ using namespace std;
 // This map keeps the nextTxoIndex in memory for speed - no database fetching on every TX
 unordered_map<string, int> nextTxoIndex;
 
-// Reference to the scriptsolver class
-VtcBlockIndexer::ScriptSolver* scriptSolver;
+
 
 VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance) {
     this->db = dbInstance;
+    this->scriptSolver = VtcBlockIndexer::ScriptSolver();
 }
 
 
@@ -107,6 +107,8 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
 }
 
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
+    this->scriptSolver.testnet = block.testnet;
+    
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
 
@@ -157,7 +159,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
         
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
-            vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
+            vector<string> addresses = this->scriptSolver.getAddressesFromScript(out.script);
             for(string address : addresses) {
                 int nextIndex = getNextTxoIndex(address + "-txo");
                 stringstream txoKey;
