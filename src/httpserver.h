@@ -59,6 +59,9 @@ namespace VtcBlockIndexer {
             /* REST Api for returning if a collection of given outpoints is spent (and if so, which TX spends it) */
             void outpointSpends( const shared_ptr< Session > session );
             
+            /* REST Api for sending a hex transaction on the VTC p2p network*/
+            void sendRawTransaction( const shared_ptr< Session > session );
+            
         private:
             leveldb::DB* db;
             std::unique_ptr<VertcoinClient> vertcoind;
