@@ -43,6 +43,8 @@ public:
     /** Read addresses from script
      */
     vector<string> getAddressesFromScript(vector<unsigned char> scriptString);
+
+    bool testnet;
 };
 
 }

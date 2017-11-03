@@ -81,6 +81,9 @@ private:
     /** File name only of the blockfile
      */
     std::string blockFileName;
+
+    /** When the scanner finds magic bytes from testnet it will toggle this to true */
+    bool testnet;
     
 };
 

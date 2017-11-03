@@ -45,6 +45,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(ScannedBlock bloc
     fullBlock.height = blockHeight;
     fullBlock.previousBlockHash = block.previousBlockHash;
     fullBlock.blockHash = block.blockHash;
+    fullBlock.testnet = block.testnet;
     
     stringstream ss;
     ss << blocksDir << "/" << block.fileName;
