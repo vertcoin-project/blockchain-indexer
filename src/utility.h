@@ -37,12 +37,12 @@ namespace VtcBlockIndexer {
             static std::string hashToHex(std::vector<unsigned char> hash);
             static std::string hashToReverseHex(std::vector<unsigned char> hash);
             static std::vector<unsigned char> decompressPubKey(std::vector<unsigned char> compressedKey);
-            static std::vector<unsigned char> publicKeyToAddress(std::vector<unsigned char> publicKey);
+            static std::vector<unsigned char> publicKeyToAddress(std::vector<unsigned char> publicKey, bool testnet);
             static std::vector<unsigned char> ripeMD160(std::vector<unsigned char> in);
             static std::vector<unsigned char> base58(std::vector<unsigned char> in);
-            static std::vector<unsigned char> ripeMD160ToP2PKAddress(std::vector<unsigned char> ripeMD);
-            static std::vector<unsigned char> ripeMD160ToP2SHAddress(std::vector<unsigned char> ripeMD);
-            static std::vector<unsigned char> bech32Address(std::vector<unsigned char> in);
+            static std::vector<unsigned char> ripeMD160ToP2PKAddress(std::vector<unsigned char> ripeMD, bool testnet);
+            static std::vector<unsigned char> ripeMD160ToP2SHAddress(std::vector<unsigned char> ripeMD, bool testnet);
+            static std::vector<unsigned char> bech32Address(std::vector<unsigned char> in, bool testnet);
             ~Utility();
             
         private:

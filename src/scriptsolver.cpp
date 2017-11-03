@@ -29,7 +29,7 @@
 
 using namespace std;
 VtcBlockIndexer::ScriptSolver::ScriptSolver() {
-    
+    this->testnet = false;
 }
 
 vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsigned char> script) {
@@ -49,7 +49,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
               
         
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char>(&script[3], &script[23]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char>(&script[3], &script[23]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -61,7 +61,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
             0xAC==script.at(scriptSize-1) // OP_CHECKSIG
               
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[66]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[66]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -72,7 +72,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x21==script.at(0)            &&  // OP_PUSHDATA(33)
         0xAC==script.at(scriptSize-1)     // OP_CHECKSIG
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -83,7 +83,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x00 == script.at(0)        &&  
         0x14 == script.at(1)        
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[22]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[22]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -94,7 +94,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x00 == script.at(0)        &&  
         0x20 == script.at(1)        
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[34]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[34]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }
@@ -119,7 +119,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
     ) {
 
         // TODO: distill the address and add it to the return array.
-        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]));    
+        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]), this->testnet);    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
     }

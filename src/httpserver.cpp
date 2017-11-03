@@ -267,7 +267,24 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
     } );
 } 
 
-
+void VtcBlockIndexer::HttpServer::sendRawTransaction( const shared_ptr< Session > session )
+{
+    const auto request = session->get_request( );
+    const size_t content_length = request->get_header( "Content-Length", 0);
+    session->fetch( content_length, [ request, this ]( const shared_ptr< Session > session, const Bytes & body )
+    {
+        const string rawtx = string(body.begin(), body.end());
+        
+        try {
+            const auto txid = vertcoind->sendrawtransaction(rawtx);
+            
+            session->close(OK, txid, {{"Content-Length",  std::to_string(txid.size())}});
+        } catch(const jsonrpc::JsonRpcException& e) {
+            const std::string message(e.what());
+            session->close(400, message, {{"Content-Length",  std::to_string(message.size())}});
+        }
+    });
+} 
 
 void VtcBlockIndexer::HttpServer::run()
 {
@@ -299,6 +316,9 @@ void VtcBlockIndexer::HttpServer::run()
     outpointSpendsResource->set_path( "/outpointSpends" );
     outpointSpendsResource->set_method_handler("POST", bind(&VtcBlockIndexer::HttpServer::outpointSpends, this, std::placeholders::_1) );
 
+    auto sendRawTransactionResource = make_shared<Resource>();
+    sendRawTransactionResource->set_path( "/sendRawTransaction" );
+    sendRawTransactionResource->set_method_handler("POST", bind(&VtcBlockIndexer::HttpServer::sendRawTransaction, this, std::placeholders::_1) );
 
     auto settings = make_shared< Settings >( );
     settings->set_port( 8888 );
@@ -312,5 +332,6 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( getTransactionProofResource );
     service.publish( outpointSpendResource );
     service.publish( outpointSpendsResource );
+    service.publish( sendRawTransactionResource );
     service.start( settings );
 }
