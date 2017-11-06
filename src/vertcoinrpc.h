@@ -26,6 +26,18 @@ namespace VtcBlockIndexer {
                                                     result.toStyledString());
                 }
             }
+
+            Json::Value getrawmempool() 
+            throw (jsonrpc::JsonRpcException) {
+                Json::Value p;
+                const Json::Value result = this->CallMethod("getrawmempool", p);
+                if(result.isArray()) {
+                    return result;
+                } else {
+                    throw jsonrpc::JsonRpcException(jsonrpc::Errors::ERROR_CLIENT_INVALID_RESPONSE,
+                                                    result.toStyledString());
+                }
+            }
             
             std::string sendrawtransaction(const std::string& rawTx) 
             throw (jsonrpc::JsonRpcException) {

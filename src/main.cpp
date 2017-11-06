@@ -34,6 +34,7 @@
 #include "utility.h"
 #include "blockchaintypes.h"
 #include "httpserver.h"
+#include "mempoolmonitor.h"
 #include "blockfilewatcher.h"
 #include <thread>
 
@@ -43,6 +44,7 @@ using namespace std;
 leveldb::DB *db;
 VtcBlockIndexer::HttpServer httpServer(nullptr,"");
 VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr);
+VtcBlockIndexer::MempoolMonitor mempoolMonitor;
 
 void runBlockfileWatcher(string blocksDir) {
     cout << "Starting blockfile watcher..." << endl;
@@ -50,6 +52,10 @@ void runBlockfileWatcher(string blocksDir) {
     blockFileWatcher.startWatcher();
 }
 
+void runMempoolMonitor() {
+    cout << "Starting mempool monitor..." << endl;
+    mempoolMonitor.startWatcher();
+}
 
 
 int main(int argc, char* argv[]) {
@@ -68,6 +74,9 @@ int main(int argc, char* argv[]) {
 
     // Start blockfile watcher on separate thread
     std::thread watcherThread(runBlockfileWatcher, string(argv[1]));   
+    
+    // Start blockfile watcher on separate thread
+    std::thread mempoolThread(runMempoolMonitor);   
     
     // Start webserver on main thread.
     httpServer = VtcBlockIndexer::HttpServer(db, string(argv[1]));
