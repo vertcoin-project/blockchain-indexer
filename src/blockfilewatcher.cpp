@@ -205,7 +205,7 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
         } 
     
         if(!blockIndexer.hasIndexedBlock(bestBlock.blockHash, this->blockHeight)) {
-            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, false);
+            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, bestBlock.testnet, false);
            
             blockIndexer.indexBlock(fullBlock);
         }
