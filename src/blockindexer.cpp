@@ -36,8 +36,9 @@ unordered_map<string, int> nextTxoIndex;
 
 
 
-VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance) {
+VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor) {
     this->db = dbInstance;
+    this->mempoolMonitor = mempoolMonitor;
     this->scriptSolver = VtcBlockIndexer::ScriptSolver();
 }
 
@@ -193,6 +194,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
                 this->db->Put(leveldb::WriteOptions(), blockTxoSpentKey.str(), txSpentKey.str());
             }
         }
+        this->mempoolMonitor->transactionIndexed(tx.txHash);
     }
 
 

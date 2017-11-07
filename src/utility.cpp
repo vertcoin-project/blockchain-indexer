@@ -145,6 +145,18 @@ vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char
     return base58(ripeMD);
 }
 
+vector<unsigned char> VtcBlockIndexer::Utility::hexToBytes(const std::string hex) {
+    vector<unsigned char> bytes;
+  
+    for (unsigned int i = 0; i < hex.length(); i += 2) {
+      string byteString = hex.substr(i, 2);
+      unsigned char byte = (unsigned char) strtol(byteString.c_str(), NULL, 16);
+      bytes.push_back(byte);
+    }
+  
+    return bytes;
+}
+
 vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160(vector<unsigned char> in) {
     unsigned char hash[CRIPEMD160::OUTPUT_SIZE];
     CRIPEMD160().Write(in.data(), in.size()).Finalize(hash);

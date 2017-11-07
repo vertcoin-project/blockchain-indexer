@@ -30,7 +30,7 @@
 #include "vertcoinrpc.h"
 #include "blockreader.h"
 #include "scriptsolver.h"
-
+#include "mempoolmonitor.h"
 
 using namespace std;
 using namespace restbed;
@@ -45,7 +45,7 @@ namespace VtcBlockIndexer {
     
     class HttpServer {
         public:
-            HttpServer(leveldb::DB* dbInstance, std::string blocksDir);
+            HttpServer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor, std::string blocksDir);
             void run();
             /* REST Api for returning the balance of a given address */
             void addressBalance( const shared_ptr< Session > session );
@@ -74,7 +74,7 @@ namespace VtcBlockIndexer {
             std::unique_ptr<jsonrpc::HttpClient> httpClient;
             VtcBlockIndexer::BlockReader blockReader;
             VtcBlockIndexer::ScriptSolver scriptSolver;
-
+            VtcBlockIndexer::MempoolMonitor* mempoolMonitor;
     /** Directory containing the blocks
      */
     std::string blocksDir; 

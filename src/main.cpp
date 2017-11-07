@@ -42,13 +42,13 @@ using namespace std;
 
 
 leveldb::DB *db;
-VtcBlockIndexer::HttpServer httpServer(nullptr,"");
-VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr);
+VtcBlockIndexer::HttpServer httpServer(nullptr,nullptr,"");
+VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr, nullptr);
 VtcBlockIndexer::MempoolMonitor mempoolMonitor;
 
 void runBlockfileWatcher(string blocksDir) {
     cout << "Starting blockfile watcher..." << endl;
-    blockFileWatcher = VtcBlockIndexer::BlockFileWatcher(blocksDir, db);
+    blockFileWatcher = VtcBlockIndexer::BlockFileWatcher(blocksDir, db, &mempoolMonitor);
     blockFileWatcher.startWatcher();
 }
 
@@ -79,6 +79,6 @@ int main(int argc, char* argv[]) {
     std::thread mempoolThread(runMempoolMonitor);   
     
     // Start webserver on main thread.
-    httpServer = VtcBlockIndexer::HttpServer(db, string(argv[1]));
+    httpServer = VtcBlockIndexer::HttpServer(db, &mempoolMonitor, string(argv[1]));
     httpServer.run(); 
 }

@@ -18,20 +18,24 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "mempoolmonitor.h"
+#include "utility.h"
 #include "scriptsolver.h"
 #include "blockchaintypes.h"
 #include <unordered_map>
 #include <chrono>
 #include <thread>
 #include <time.h>
+#include "byte_array_buffer.h"
 using namespace std;
 
 // This map keeps the memorypool transactions deserialized in memory.
-unordered_map<string, VtcBlockIndexer::Transaction> mempoolTransactions;
+
 
 VtcBlockIndexer::MempoolMonitor::MempoolMonitor() {
     httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@vertcoind:8332"));
     vertcoind.reset(new VertcoinClient(*httpClient));
+    blockReader.reset(new VtcBlockIndexer::BlockReader(""));
+    scriptSolver.reset(new VtcBlockIndexer::ScriptSolver());
 }
 
 void VtcBlockIndexer::MempoolMonitor::startWatcher() {
@@ -40,14 +44,84 @@ void VtcBlockIndexer::MempoolMonitor::startWatcher() {
             const Json::Value mempool = vertcoind->getrawmempool();
             for ( uint index = 0; index < mempool.size(); ++index )
             {
-                cout << "Found mempool tx: " << mempool[index].asString() << endl;
+                if(mempoolTransactions.find(mempool[index].asString()) == mempoolTransactions.end()) {
+                    const Json::Value rawTx = vertcoind->getrawtransaction(mempool[index].asString(), false);
+                    std::vector<unsigned char> rawTxBytes = VtcBlockIndexer::Utility::hexToBytes(rawTx.asString());
+
+                    byte_array_buffer streambuf(&rawTxBytes[0], rawTxBytes.size());
+                    std::istream stream(&streambuf);
+
+                    VtcBlockIndexer::Transaction tx = blockReader->readTransaction(stream);
+                    mempoolTransactions[mempool[index].asString()] = tx;
+
+                  
+                    for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
+                        out.txHash = tx.txHash;
+                        scriptSolver->testnet = testnet;
+                        vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
+                        for(string address : addresses) {
+                            if(addressMempoolTransactions.find(address) == addressMempoolTransactions.end())
+                            {
+                                addressMempoolTransactions[address] = {};
+                            }
+                            addressMempoolTransactions[address].push_back(out);
+                        }
+                    }
+                }
             }
         } catch(const jsonrpc::JsonRpcException& e) {
             const std::string message(e.what());
             cout << "Error reading mempool " << message << endl;
         }
         
-        
         std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+string VtcBlockIndexer::MempoolMonitor::outpointSpend(string txid, uint32_t vout) {
+    for (auto kvp : mempoolTransactions) {
+        VtcBlockIndexer::Transaction tx = kvp.second;
+        for (VtcBlockIndexer::TransactionInput txi : tx.inputs) {
+            if(txi.txHash.compare(txid) == 0 && txi.txoIndex == vout) {
+                return tx.txHash;
+            }
+        }
+    }
+    return "";
+}
+ 
+vector<VtcBlockIndexer::TransactionOutput> VtcBlockIndexer::MempoolMonitor::getTxos(std::string address) {
+    if(addressMempoolTransactions.find(address) == addressMempoolTransactions.end())
+    {
+        return {};
+    } 
+    return vector<VtcBlockIndexer::TransactionOutput>(addressMempoolTransactions[address]);
+}
+
+void VtcBlockIndexer::MempoolMonitor::transactionIndexed(std::string txid) {
+    if(mempoolTransactions.find(txid) != mempoolTransactions.end()) {
+        mempoolTransactions.erase(txid);
+
+        unordered_map<string, std::vector<VtcBlockIndexer::TransactionOutput>> changedMempoolAddressTxes;
+        for (auto kvp : addressMempoolTransactions) {
+
+            vector<VtcBlockIndexer::TransactionOutput> newVector = {};
+            bool itemsRemoved = false;
+            for (VtcBlockIndexer::TransactionOutput txo : kvp.second) {
+                if(txo.txHash.compare(txid) != 0) {
+                    newVector.push_back(txo);
+                } else {
+                    itemsRemoved = true;
+                }
+            }
+
+            if(itemsRemoved) {
+                changedMempoolAddressTxes[kvp.first] = newVector;
+            }
+        }
+
+        for (auto kvp : changedMempoolAddressTxes) {
+            addressMempoolTransactions[kvp.first] = kvp.second;
+        }
     }
 }

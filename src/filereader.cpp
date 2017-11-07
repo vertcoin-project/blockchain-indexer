@@ -29,7 +29,7 @@
 
 using namespace std;
 
-uint64_t VtcBlockIndexer::FileReader::readVarInt(ifstream& stream)
+uint64_t VtcBlockIndexer::FileReader::readVarInt(istream& stream)
 {
     uint8_t prefix = 0;
     stream.read(reinterpret_cast<char *>(&prefix), sizeof(prefix));
@@ -60,13 +60,13 @@ uint64_t VtcBlockIndexer::FileReader::readVarInt(ifstream& stream)
     
 }
 
-vector<unsigned char> VtcBlockIndexer::FileReader::readHash(ifstream& stream) {
+vector<unsigned char> VtcBlockIndexer::FileReader::readHash(istream& stream) {
     vector<unsigned char> data(32);
     stream.read(reinterpret_cast<char *>(&data[0]) , 32);
     return data;
 }
 
-vector<unsigned char> VtcBlockIndexer::FileReader::readString(ifstream& stream) {
+vector<unsigned char> VtcBlockIndexer::FileReader::readString(istream& stream) {
     uint64_t length = readVarInt(stream);
     
     if(length > 0) {

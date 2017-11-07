@@ -38,14 +38,15 @@
 VtcBlockIndexer::BlockReader blockReader("");
 
 // Block indexer object used to pass blocks and store in the index
-VtcBlockIndexer::BlockIndexer blockIndexer(nullptr);
+VtcBlockIndexer::BlockIndexer blockIndexer(nullptr, nullptr);
 
 using namespace std;
 
 // Constructor
-VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::DB* dbInstance) {
+VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor) {
     this->db = dbInstance;
-    blockIndexer = VtcBlockIndexer::BlockIndexer(this->db);
+    this->mempoolMonitor = mempoolMonitor;
+    blockIndexer = VtcBlockIndexer::BlockIndexer(this->db, this->mempoolMonitor);
     blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     this->blocksDir = blocksDir;
     this->maxLastModified.tv_sec = 0;
@@ -89,7 +90,7 @@ void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
             updateIndex();
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
@@ -100,7 +101,9 @@ void VtcBlockIndexer::BlockFileWatcher::scanBlocks(string fileName) {
         while(blockScanner->moveNext()) {
             this->totalBlocks++;
             VtcBlockIndexer::ScannedBlock block = blockScanner->scanNextBlock();
-
+            if(block.testnet != mempoolMonitor->testnet) {
+                mempoolMonitor->testnet = block.testnet;
+            }
             // Create an empty vector inside the unordered map if this previousBlockHash
             // was not found before.
             if(this->blocks.find(block.previousBlockHash) == this->blocks.end()) {

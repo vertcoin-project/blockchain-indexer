@@ -57,6 +57,9 @@ struct TransactionOutput {
     
     // The index of the output in the list of outputs
     uint32_t index;
+
+    // Convenience method for keeping TXOs in memory (mempool)
+    string txHash;
 };
 
 // Describes a transaction input inside a blockchain transaction

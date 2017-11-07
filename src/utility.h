@@ -43,6 +43,7 @@ namespace VtcBlockIndexer {
             static std::vector<unsigned char> ripeMD160ToP2PKAddress(std::vector<unsigned char> ripeMD, bool testnet);
             static std::vector<unsigned char> ripeMD160ToP2SHAddress(std::vector<unsigned char> ripeMD, bool testnet);
             static std::vector<unsigned char> bech32Address(std::vector<unsigned char> in, bool testnet);
+            static std::vector<unsigned char> hexToBytes(std::string hex);
             ~Utility();
             
         private:

@@ -28,6 +28,7 @@
 #include "leveldb/write_batch.h"
 #include "blockchaintypes.h"
 #include "scriptsolver.h"
+#include "mempoolmonitor.h"
 
 namespace VtcBlockIndexer {
 
@@ -42,7 +43,7 @@ class BlockIndexer {
 public:
     /** Constructs a BlockIndexer instance using the given block data directory
      */
-    BlockIndexer(leveldb::DB* dbInstance);
+    BlockIndexer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor);
 
     /** Indexes the contents of the block
      */
@@ -64,6 +65,7 @@ private:
     int getNextTxoIndex(std::string prefix);
 
     leveldb::DB* db;
+    VtcBlockIndexer::MempoolMonitor* mempoolMonitor;
 
     // Reference to the scriptsolver class
     VtcBlockIndexer::ScriptSolver scriptSolver;

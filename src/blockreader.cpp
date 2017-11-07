@@ -94,7 +94,7 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(string fileName, 
     return fullBlock;
 }
 
-VtcBlockIndexer::Transaction VtcBlockIndexer::BlockReader::readTransaction(ifstream& blockFile) {
+VtcBlockIndexer::Transaction VtcBlockIndexer::BlockReader::readTransaction(istream& blockFile) {
     bool segwit = false;
     
     VtcBlockIndexer::Transaction transaction;

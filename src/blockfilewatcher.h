@@ -28,6 +28,7 @@
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
 #include "blockchaintypes.h"
+#include "mempoolmonitor.h"
 
 namespace VtcBlockIndexer {
 
@@ -40,7 +41,7 @@ class BlockFileWatcher {
 public:
     /** Constructs a BlockIndexer instance using the given block data directory
      */
-    BlockFileWatcher(std::string blocksDir, leveldb::DB* dbInstance);
+    BlockFileWatcher(std::string blocksDir, leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor);
 
     /** Starts watching the blocksdir for changes and will execute an incremental
      * indexing when files have changed */
@@ -80,6 +81,7 @@ private:
     std::string processNextBlock(std::string prevBlockHash);
     std::string blocksDir;
     leveldb::DB* db;
+    VtcBlockIndexer::MempoolMonitor* mempoolMonitor;
     int totalBlocks;
     int blockHeight;
     unordered_map<string, vector<VtcBlockIndexer::ScannedBlock>> blocks;    

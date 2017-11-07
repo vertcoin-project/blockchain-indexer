@@ -46,9 +46,9 @@ public:
      */
     Block readBlock(std::string fileName, uint64_t filePosition, uint64_t blockHeight, bool testnet, bool headerOnly);
 
-    /** Reads a transaction from an open file stream
+    /** Reads a transaction from an open stream
      */
-    Transaction readTransaction(std::ifstream& blockFile);
+    Transaction readTransaction(std::istream& blockFile);
 
     /** Reads a transaction from an open file stream
      */
