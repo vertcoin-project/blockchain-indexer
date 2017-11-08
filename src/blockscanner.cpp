@@ -51,12 +51,10 @@ bool VtcBlockIndexer::BlockScanner::moveNext() {
     this->blockFileStream.read(buffer.get(), 4);
 
     if(this->blockFileStream.eof()) {
-        cout << "Blockstream EOF" << endl;
         return false;   
     }
 
     if(this->blockFileStream.fail()) {
-        cout << "Blockstream Fail" << endl;
         return false;   
     }
 
