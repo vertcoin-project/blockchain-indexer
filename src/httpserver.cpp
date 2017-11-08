@@ -190,8 +190,11 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
 
     long long sinceBlock = stoll(request->get_path_parameter( "sinceBlock", "0" ));
     
-    cout << "Checking balance for address " << request->get_path_parameter( "address" ) << endl;
-
+    int txHashOnly = stoi(request->get_query_parameter("txHashOnly","0"));
+    int raw = stoi(request->get_query_parameter("raw","0"));
+    
+    cout << "Fetching address txos for address " << request->get_path_parameter( "address" ) << endl;
+   
     string start(request->get_path_parameter( "address" ) + "-txo-00000001");
     string limit(request->get_path_parameter( "address" ) + "-txo-99999999");
     
@@ -208,10 +211,18 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
         long long block = stoll(txo.substr(72,8));
         if(block >= sinceBlock) {
             json txoObj;
-            txoObj["txhash"] = txo.substr(0,64);
-            txoObj["vout"] = stoll(txo.substr(64,8));
-            txoObj["block"] = block;
-            txoObj["value"] = stoll(txo.substr(80));
+            txoObj["height"] = block;
+
+            if(raw != 0) {
+                try {
+                    const Json::Value tx = vertcoind->getrawtransaction(txo.substr(0,64), false);
+                    txoObj["tx"] = tx.asString();
+                } catch(const jsonrpc::JsonRpcException& e) {
+                    const std::string message(e.what());
+                    cout << "Not found " << message << endl;
+                }
+            }
+
             if(!s.ok()) {
                 string spender = mempoolMonitor->outpointSpend(txo.substr(0,64), stol(txo.substr(64,8)));
                 if(spender.compare("") == 0) {
@@ -223,6 +234,25 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
             } else {
                 txoObj["spender"] = spentTx.substr(65, 64);
             }
+
+            if(raw != 0 && txoObj["spender"].is_string()) {
+                try {
+                    const Json::Value tx = vertcoind->getrawtransaction(txoObj["spender"].get<string>(), false);
+                    txoObj["spender"] = tx.asString();
+                } catch(const jsonrpc::JsonRpcException& e) {
+                    const std::string message(e.what());
+                    cout << "Not found " << message << endl;
+                }
+            }
+
+            if(raw == 0) {
+                txoObj["txhash"] = txo.substr(0,64);
+            }
+            if(txHashOnly == 0 && raw == 0) {
+                txoObj["vout"] = stoll(txo.substr(64,8));
+                txoObj["value"] = stoll(txo.substr(80));
+            }
+
             j.push_back(txoObj);
         }
     }
@@ -254,26 +284,39 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
 void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > session )
 {
     json j;
-
+    j["error"] = false;
     const auto request = session->get_request( );
 
     long long vout = stoll(request->get_path_parameter( "vout", "0" ));
     string txid = request->get_path_parameter("txid", "");
-    stringstream txoId;
-    txoId << "txo-" << txid << "-" << setw(8) << setfill('0') << vout << "-spent";
-    cout << "Checking outpoint spent " << txoId.str() << endl;
-    string spentTx;
-    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
-    j["spent"] = s.ok();
-    if(s.ok()) {
-        j["spender"] = spentTx.substr(65, 64);
-    } else {
-        string mempoolSpend = mempoolMonitor->outpointSpend(txid, vout);
-        if(mempoolSpend.compare("") != 0) {
-            j["spent"] = true;
-            j["spender"] = mempoolSpend;
+    stringstream txBlockKey;
+    string txBlock;
+    txBlockKey << "tx-" << txid << "-block";
+    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txBlockKey.str(), &txBlock);
+    if(!s.ok()) {
+        j["error"] = true;
+        j["errorDescription"] = "Transaction ID not found";
+    }
+    else 
+    {
+        stringstream txoId;
+        txoId << "txo-" << txid << "-" << setw(8) << setfill('0') << vout << "-spent";
+        cout << "Checking outpoint spent " << txoId.str() << endl;
+        string spentTx;
+
+        s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
+        j["spent"] = s.ok();
+        if(s.ok()) {
+            j["spender"] = spentTx.substr(65, 64);
+        } else {
+            string mempoolSpend = mempoolMonitor->outpointSpend(txid, vout);
+            if(mempoolSpend.compare("") != 0) {
+                j["spent"] = true;
+                j["spender"] = mempoolSpend;
+            }
         }
     }
+   
     string body = j.dump();
      
     session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
@@ -297,25 +340,39 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
                     txoId << "txo-" << txo["txid"].get<string>() << "-" << setw(8) << setfill('0') << txo["vout"].get<int>() << "-spent";
                     cout << "Checking outpoint spent " << txoId.str() << endl;
             
-                    
-                    string spentTx;
-                    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
-                    if(s.ok()) {
-                        json j;
-                        j["txid"] = txo["txid"];
-                        j["vout"] = txo["vout"];
-                        j["spender"] = spentTx.substr(65, 64);
-                        output.push_back(j);
-                    } else {
-                        string mempoolSpend = mempoolMonitor->outpointSpend( txo["txid"].get<string>(), txo["vout"].get<int>());
-                        if(mempoolSpend.compare("") != 0) {
-                            json j;
-                            j["txid"] = txo["txid"];
-                            j["vout"] = txo["vout"];
-                            j["spender"] = mempoolSpend;
-                            output.push_back(j);
+                    json j;
+                    j["txid"] = txo["txid"];
+                    j["vout"] = txo["vout"];
+                    j["error"] = false;
+                    stringstream txBlockKey;
+                    string txBlock;
+                    txBlockKey << "tx-" << txid << "-block";
+                    leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txBlockKey.str(), &txBlock);
+                    if(!s.ok()) {
+                        j["error"] = true;
+                        j["errorDescription"] = "Transaction ID not found";
+                    }
+                    else 
+                    {
+                        string spentTx;
+                        s = this->db->Get(leveldb::ReadOptions(), txoId.str(), &spentTx);
+                        if(s.ok()) {
+                            j["spender"] = spentTx.substr(65, 64);
+                            j["spent"] = true;
+                        } else {
+                            string mempoolSpend = mempoolMonitor->outpointSpend( txo["txid"].get<string>(), txo["vout"].get<int>());
+                            if(mempoolSpend.compare("") != 0) {
+                                json j;
+                                j["spender"] = mempoolSpend;
+                                j["spent"] = true;
+                            } else {
+                                j["spent"] = false;
+                            }
                         }
                     }
+
+                    output.push_back(j);
+                    
                 }
             }
         }
@@ -367,7 +424,7 @@ void VtcBlockIndexer::HttpServer::run()
     getTransactionProofResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getTransactionProof, this, std::placeholders::_1) );
 
     auto outpointSpendResource = make_shared<Resource>();
-    outpointSpendResource->set_path( "/outpointSpend/{txid: [0-9a-f]*}/{vout: [0-9]*}" );
+    outpointSpendResource->set_path( "/outpointSpend/{txid: .*}/{vout: .*}" );
     outpointSpendResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::outpointSpend, this, std::placeholders::_1) );
 
     auto outpointSpendsResource = make_shared<Resource>();
