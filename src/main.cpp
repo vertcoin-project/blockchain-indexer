@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     options.create_if_missing = true;
     options.block_cache = leveldb::NewLRUCache(300 * 1024 * 1024);
     options.filter_policy = leveldb::NewBloomFilterPolicy(10);
-    leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
+    leveldb::Status status = leveldb::DB::Open(options, "/index", &db);
     assert(status.ok());
 
     // Start blockfile watcher on separate thread
