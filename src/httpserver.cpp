@@ -346,7 +346,7 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
                     j["error"] = false;
                     stringstream txBlockKey;
                     string txBlock;
-                    txBlockKey << "tx-" << txid << "-block";
+                    txBlockKey << "tx-" << txo["txid"].get<string>() << "-block";
                     leveldb::Status s = this->db->Get(leveldb::ReadOptions(), txBlockKey.str(), &txBlock);
                     if(!s.ok()) {
                         j["error"] = true;
