@@ -5,8 +5,9 @@ services:
     image: lukechilds/vertcoind
     expose:
       - "8332"
+      - "8333"
     ports:
-      - "8333:8333"
+      - "15889:15889"
     volumes:
       - ./data/test/vertcoind:/data
     command: -rpcuser=middleware -rpcpassword=middleware -testnet -addnode=jlovejoy.mit.edu -addnode=gertjaap.ddns.net -txindex
