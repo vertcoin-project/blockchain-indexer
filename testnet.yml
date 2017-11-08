@@ -1,0 +1,27 @@
+version: "2"
+services:
+
+  vertcoind-test:
+    image: lukechilds/vertcoind
+    expose:
+      - "8332"
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./data/test/vertcoind:/data
+    command: -rpcuser=middleware -rpcpassword=middleware -testnet -addnode=jlovejoy.mit.edu -addnode=gertjaap.ddns.net -txindex
+
+  vtc-middleware-cpp-test:
+    image: vtc-wallet-middleware
+    environment:
+      - VERTCOIND_HOST=vertcoind-test
+    expose:
+      - "8888"
+    volumes:
+      - ./data/test/vertcoind/testnet3/blocks:/blocks
+      - ./data/test/index:/index
+
+networks:
+  default:
+    external:
+      name: vertcoin-middleware

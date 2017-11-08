@@ -1,0 +1,27 @@
+version: "2"
+services:
+
+  vertcoind-main:
+    image: lukechilds/vertcoind
+    expose:
+      - "8332"
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./data/main/vertcoind:/data
+    command: -rpcuser=middleware -rpcpassword=middleware -addnode=jlovejoy.mit.edu -addnode=gertjaap.ddns.net -txindex
+
+  vtc-middleware-cpp-main:
+    image: vtc-wallet-middleware
+    environment:
+      - VERTCOIND_HOST=vertcoind-main
+    expose:
+      - "8888"
+    volumes:
+      - ./data/main/vertcoind/blocks:/blocks
+      - ./data/main/index:/index
+
+networks:
+  default:
+    external:
+      name: vertcoin-middleware
