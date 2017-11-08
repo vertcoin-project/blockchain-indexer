@@ -3,6 +3,7 @@ services:
 
   vertcoind-test:
     image: lukechilds/vertcoind
+    restart: always
     expose:
       - "8332"
       - "8333"
@@ -14,6 +15,7 @@ services:
 
   vtc-middleware-cpp-test:
     image: vtc-wallet-middleware
+    restart: always
     environment:
       - VERTCOIND_HOST=vertcoind-test
     expose:
