@@ -90,6 +90,8 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(string fileName, 
             fullBlock.transactions.push_back(transaction);
         }
     }
+    uint64_t endPosBlock = blockFile.tellg();
+    fullBlock.byteSize = endPosBlock - filePosition;
     blockFile.close();
     return fullBlock;
 }

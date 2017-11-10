@@ -123,6 +123,19 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
         // There was a different block at this height. Ditch the TXOs from the old block.
         clearBlockTxos(existingBlockHash);
     }
+
+    stringstream blockHeight;
+    blockHeight << setw(8) << setfill('0') << block.height;
+
+    string highestBlock;
+    s = this->db->Get(leveldb::ReadOptions(), "highestblock", &highestBlock);
+    if(!s.ok()) {
+        this->db->Put(leveldb::WriteOptions(), "highestblock", blockHeight.str());
+    } else {
+        if(stoull(highestBlock) < block.height) {
+            this->db->Put(leveldb::WriteOptions(), "highestblock", blockHeight.str());
+        }
+    }
     
     this->db->Put(leveldb::WriteOptions(), ss.str(), block.blockHash);
     
@@ -140,6 +153,18 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
 
     this->db->Put(leveldb::WriteOptions(), ssBlockHashHeightKey.str(), ssBlockHashHeightValue.str());
     
+    stringstream ssBlockTimeHeightKey;
+    ssBlockTimeHeightKey << "block-time-" << setw(8) << setfill('0') << block.height;
+    this->db->Put(leveldb::WriteOptions(), ssBlockTimeHeightKey.str(), std::to_string(block.time));
+    
+    stringstream ssBlockSizeHeightKey;
+    ssBlockSizeHeightKey << "block-size-" << setw(8) << setfill('0') << block.height;
+    this->db->Put(leveldb::WriteOptions(), ssBlockSizeHeightKey.str(), std::to_string(block.byteSize));
+    
+    stringstream ssBlockTxCountHeightKey;
+    ssBlockTxCountHeightKey << "block-txcount-"  << setw(8) << setfill('0') << block.height;
+    this->db->Put(leveldb::WriteOptions(), ssBlockTxCountHeightKey.str(), std::to_string(block.transactions.size()));
+
     int txIndex = -1;
     // TODO: Verify block integrity
     for(VtcBlockIndexer::Transaction tx : block.transactions) {

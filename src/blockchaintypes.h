@@ -129,6 +129,9 @@ struct Block {
     // The height of the block in the chain
     uint64_t height;
 
+    // Size of the block in bytes
+    uint64_t byteSize;
+
     // Timestamp of the block
     uint32_t time;
 

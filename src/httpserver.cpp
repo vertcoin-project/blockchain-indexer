@@ -43,6 +43,8 @@ VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance, VtcBlockIndexer
     vertcoind.reset(new VertcoinClient(*httpClient));
 }
 
+
+
 void VtcBlockIndexer::HttpServer::getTransaction(const shared_ptr<Session> session) {
     const auto request = session->get_request();
     
@@ -124,6 +126,85 @@ void VtcBlockIndexer::HttpServer::getTransactionProof(const shared_ptr<Session> 
     string body = j.dump();
     
    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
+}
+
+void VtcBlockIndexer::HttpServer::sync(const shared_ptr<Session> session) {
+    json j;
+
+    const auto request = session->get_request( );
+
+    string highestBlockString;
+    this->db->Get(leveldb::ReadOptions(),"highestblock",&highestBlockString);
+
+    j["error"] = nullptr;
+    j["height"] = stoll(highestBlockString);
+    try {
+        const Json::Value blockCount = vertcoind->getblockcount();
+        
+        j["blockChainHeight"] = blockCount.asInt();
+    } catch(const jsonrpc::JsonRpcException& e) {
+        const std::string message(e.what());
+        j["error"] = message;
+    }
+
+    float progress = (float)j["height"].get<int>() / (float)j["blockChainHeight"].get<int>();
+    progress *= 100;
+    j["syncPercentage"] = progress;
+    if(progress >= 100) {
+        j["status"] = "finished";
+    } else {
+        j["status"] = "indexing";
+    }
+
+    string body = j.dump();
+    session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
+}
+
+void VtcBlockIndexer::HttpServer::getBlocks(const shared_ptr<Session> session) {
+    json j = json::array();
+
+    const auto request = session->get_request( );
+
+    string highestBlockString;
+    this->db->Get(leveldb::ReadOptions(),"highestblock",&highestBlockString);
+    
+   
+    long long limitParam = stoi(request->get_query_parameter("limit","0"));
+    if(limitParam == 0 || limitParam > 100)
+        limitParam = 100;
+
+    long long lowestBlock = stoll(highestBlockString)-limitParam;
+    stringstream lowestBlockString;
+    lowestBlockString << setw(8) << setfill('0') << lowestBlock;
+
+    string start("block-" + highestBlockString);
+    string limit("block-" + lowestBlockString.str());
+    
+    leveldb::Iterator* it = this->db->NewIterator(leveldb::ReadOptions());
+    for (it->Seek(start);
+            it->Valid() && it->key().ToString() > limit;
+            it->Prev()) {
+        json blockObj;
+        string blockHeightString = it->key().ToString().substr(6);
+        blockObj["hash"] = it->value().ToString();
+        string blockSizeString;
+        string blockTxesString;
+        string blockTimeString;
+        this->db->Get(leveldb::ReadOptions(),"block-size-" + blockHeightString,&blockSizeString);
+        this->db->Get(leveldb::ReadOptions(),"block-txcount-" + blockHeightString,&blockTxesString);
+        this->db->Get(leveldb::ReadOptions(),"block-time-" + blockHeightString,&blockTimeString);
+        blockObj["height"] = stoll(blockHeightString);
+        blockObj["size"] = stoll(blockSizeString);
+        blockObj["time"] = stoll(blockTimeString);
+        blockObj["txlength"] = stoll(blockTxesString);
+        blockObj["poolInfo"] = nullptr;
+        j.push_back(blockObj);
+    }
+
+    string body = j.dump();
+    
+   session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
+
 }
 
 void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > session )
@@ -435,6 +516,15 @@ void VtcBlockIndexer::HttpServer::run()
     sendRawTransactionResource->set_path( "/sendRawTransaction" );
     sendRawTransactionResource->set_method_handler("POST", bind(&VtcBlockIndexer::HttpServer::sendRawTransaction, this, std::placeholders::_1) );
 
+    auto blocksResource = make_shared<Resource>();
+    blocksResource->set_path( "/blocks" );
+    blocksResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::getBlocks, this, std::placeholders::_1) );
+
+    auto syncResource = make_shared<Resource>();
+    syncResource->set_path( "/sync" );
+    syncResource->set_method_handler("GET", bind(&VtcBlockIndexer::HttpServer::sync, this, std::placeholders::_1) );
+
+
     auto settings = make_shared< Settings >( );
     settings->set_port( 8888 );
     settings->set_default_header( "Connection", "close" );
@@ -448,5 +538,7 @@ void VtcBlockIndexer::HttpServer::run()
     service.publish( outpointSpendResource );
     service.publish( outpointSpendsResource );
     service.publish( sendRawTransactionResource );
+    service.publish( blocksResource );
+    service.publish( syncResource );
     service.start( settings );
 }

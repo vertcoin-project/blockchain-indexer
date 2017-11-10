@@ -38,6 +38,18 @@ namespace VtcBlockIndexer {
                                                     result.toStyledString());
                 }
             }
+
+            Json::Value getblockcount() 
+            throw (jsonrpc::JsonRpcException) {
+                Json::Value p;
+                const Json::Value result = this->CallMethod("getblockcount", p);
+                if(result.isNumeric()) {
+                    return result;
+                } else {
+                    throw jsonrpc::JsonRpcException(jsonrpc::Errors::ERROR_CLIENT_INVALID_RESPONSE,
+                                                    result.toStyledString());
+                }
+            }
             
             std::string sendrawtransaction(const std::string& rawTx) 
             throw (jsonrpc::JsonRpcException) {
