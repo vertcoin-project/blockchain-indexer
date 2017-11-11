@@ -105,11 +105,8 @@ void VtcBlockIndexer::HttpServer::getTransactionProof(const shared_ptr<Session> 
             session->close(404, message, {{"Content-Length",  std::to_string(message.size())}});
             return;
         }
-        bool testnet = false;
-        if(filePosition.size() > 24) {
-            testnet = (stoi(filePosition.substr(24)) == 1);
-        }
-        Block block = this->blockReader->readBlock(filePosition.substr(0,12),stoll(filePosition.substr(12,12)),i,testnet,true);
+       
+        Block block = this->blockReader->readBlock(filePosition.substr(0,12),stoll(filePosition.substr(12,12)),i,true);
 
         json jsonBlock;
         jsonBlock["blockHash"] = block.blockHash;

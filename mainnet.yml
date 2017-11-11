@@ -23,8 +23,10 @@ services:
     volumes:
       - ./data/main/vertcoind/blocks:/blocks
       - ./data/main/index:/index
+      - ./coins:/coins
+    command: --coinParams=/coins/vertcoin-mainnet.json
 
-networks:
+networks:    
   default:
     external:
       name: vertcoin-middleware

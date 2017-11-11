@@ -25,8 +25,6 @@
 #include <string>
 #include <iomanip>
 
-const char magic[] = "\xfa\xbf\xb5\xda";
-const char magicTestnet[] = "\x76\x65\x72\x74";
 
 VtcBlockIndexer::BlockScanner::BlockScanner(const std::string blocksDir, const std::string blockFileName) {
     std::stringstream ss;
@@ -47,8 +45,8 @@ bool VtcBlockIndexer::BlockScanner::close() {
 }
 
 bool VtcBlockIndexer::BlockScanner::moveNext() {
-    std::unique_ptr<char> buffer(new char[4]);
-    this->blockFileStream.read(buffer.get(), 4);
+    std::vector<unsigned char> buffer(4);
+    this->blockFileStream.read(reinterpret_cast<char *>(&buffer[0]), 4);
 
     if(this->blockFileStream.eof()) {
         return false;   
@@ -58,17 +56,7 @@ bool VtcBlockIndexer::BlockScanner::moveNext() {
         return false;   
     }
 
-    bool magicMatch = (memcmp(buffer.get(), magic, 4) == 0);
-    if(!magicMatch) { 
-        magicMatch = (memcmp(buffer.get(), magicTestnet, 4) == 0);
-        if(magicMatch) { 
-            this->testnet = true;
-        }
-    } else { 
-        this->testnet = false;
-    }
-
-    return (magicMatch);
+    return std::equal(buffer.begin(), buffer.end(), VtcBlockIndexer::CoinParams::magic.begin());
 }
 
 VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
@@ -91,7 +79,6 @@ VtcBlockIndexer::ScannedBlock VtcBlockIndexer::BlockScanner::scanNextBlock() {
     block.previousBlockHash =  VtcBlockIndexer::Utility::hashToReverseHex(previousBlockHash);
     
     this->blockFileStream.seekg(blockSize - 80, std::ios_base::cur);
-    
-    block.testnet = this->testnet;
+
     return block;
 }

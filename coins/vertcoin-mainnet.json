@@ -1,0 +1,7 @@
+{
+    "magic" : "fabfb5da",
+    "version_p2pkh" : "47",
+    "version_p2sh"  : "05",
+    "prefix_bech32": "vtc"
+
+}

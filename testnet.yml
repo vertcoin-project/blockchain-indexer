@@ -23,8 +23,10 @@ services:
     volumes:
       - ./data/test/vertcoind/testnet3/blocks:/blocks
       - ./data/test/index:/index
+      - ./coins:/coins
+    command: --coinParams=/coins/vertcoin-testnet.json
 
-networks:
+networks:    
   default:
     external:
       name: vertcoin-middleware

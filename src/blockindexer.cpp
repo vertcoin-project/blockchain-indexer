@@ -108,8 +108,6 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
 }
 
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
-    this->scriptSolver->testnet = block.testnet;
-    
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
 
@@ -142,7 +140,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     stringstream ssBlockFilePositionKey;
     ssBlockFilePositionKey << "block-filePosition-" << setw(8) << setfill('0') << block.height;
     stringstream ssBlockFilePositionValue;
-    ssBlockFilePositionValue << block.fileName << setw(12) << setfill('0') << block.filePosition << (block.testnet ? 1 : 0);
+    ssBlockFilePositionValue << block.fileName << setw(12) << setfill('0') << block.filePosition;
 
     this->db->Put(leveldb::WriteOptions(), ssBlockFilePositionKey.str(), ssBlockFilePositionValue.str());
     

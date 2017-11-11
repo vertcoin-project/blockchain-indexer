@@ -26,7 +26,7 @@
 #include <fstream>
 
 #include "blockchaintypes.h"
-
+#include "coinparams.h"
 namespace VtcBlockIndexer {
 
 /**
@@ -82,9 +82,6 @@ private:
      */
     std::string blockFileName;
 
-    /** When the scanner finds magic bytes from testnet it will toggle this to true */
-    bool testnet;
-    
 };
 
 }

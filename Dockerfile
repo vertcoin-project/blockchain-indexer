@@ -6,6 +6,6 @@ ADD Makefile /root/sources/vtc-wallet-middleware-cpp/Makefile
 RUN make clean -C /root/sources/vtc-wallet-middleware-cpp
 RUN make -C /root/sources/vtc-wallet-middleware-cpp
 
-CMD ["/root/sources/vtc-wallet-middleware-cpp/vtc_indexer", "/blocks"]
+ENTRYPOINT ["/root/sources/vtc-wallet-middleware-cpp/vtc_indexer"]
 
 

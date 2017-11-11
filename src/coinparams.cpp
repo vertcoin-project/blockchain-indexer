@@ -1,3 +1,4 @@
+#include "coinparams.h"
 /*  VTC Blockindexer - A utility to build additional indexes to the 
     Vertcoin blockchain by scanning and indexing the blockfiles
     downloaded by Vertcoin Core.
@@ -19,33 +20,32 @@
 */
 
 
-#ifndef SCRIPTSOLVER_H_INCLUDED
-#define SCRIPTSOLVER_H_INCLUDED
-
 #include <iostream>
 #include <fstream>
-
-#include "blockchaintypes.h"
+#include "json.hpp"
+#include "utility.h"
+using json = nlohmann::json;
 using namespace std;
 
-namespace VtcBlockIndexer {
+vector<unsigned char> VtcBlockIndexer::CoinParams::magic;
+string VtcBlockIndexer::CoinParams::bech32Prefix;
+unsigned char VtcBlockIndexer::CoinParams::p2pkhVersion;
+unsigned char VtcBlockIndexer::CoinParams::p2shVersion;
 
-/**
- * The ScriptSolver class provides methods to parse the bitcoin script language used in
- * transaction outputs and determine the public keys / addresses that can spend it.
- */
+void VtcBlockIndexer::CoinParams::readFromFile(string fileName)
+{
+    ifstream i(fileName);
+    json j;
+    i >> j;
 
-class ScriptSolver {
-public:
-    /** Constructs a BlockIndexer instance using the given block data directory
-     */
-    ScriptSolver();
-
-    /** Read addresses from script
-     */
-    vector<string> getAddressesFromScript(vector<unsigned char> scriptString);
-};
-
+    assert(j["magic"].is_string());
+    assert(j["prefix_bech32"].is_string());
+    assert(j["version_p2sh"].is_string());
+    assert(j["version_p2pkh"].is_string());
+    
+    magic = VtcBlockIndexer::Utility::hexToBytes(j["magic"].get<string>());
+    bech32Prefix = j["prefix_bech32"].get<string>();
+    p2shVersion = (unsigned char) strtol(j["version_p2sh"].get<string>().c_str(), NULL, 16);
+    p2pkhVersion = (unsigned char) strtol(j["version_p2pkh"].get<string>().c_str(), NULL, 16);
+    
 }
-
-#endif // SCRIPTSOLVER_H_INCLUDED

@@ -57,7 +57,6 @@ void VtcBlockIndexer::MempoolMonitor::startWatcher() {
                   
                     for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
                         out.txHash = tx.txHash;
-                        scriptSolver->testnet = testnet;
                         vector<string> addresses = scriptSolver->getAddressesFromScript(out.script);
                         for(string address : addresses) {
                             if(addressMempoolTransactions.find(address) == addressMempoolTransactions.end())

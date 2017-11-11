@@ -18,34 +18,28 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <vector>
+#include <string>
 
-#ifndef SCRIPTSOLVER_H_INCLUDED
-#define SCRIPTSOLVER_H_INCLUDED
-
-#include <iostream>
-#include <fstream>
-
-#include "blockchaintypes.h"
 using namespace std;
 
 namespace VtcBlockIndexer {
-
-/**
- * The ScriptSolver class provides methods to parse the bitcoin script language used in
- * transaction outputs and determine the public keys / addresses that can spend it.
- */
-
-class ScriptSolver {
-public:
-    /** Constructs a BlockIndexer instance using the given block data directory
+    
+    /**
+     * The CoinParms class provides static access to the coin parameters and a method
+     * to read them from a JSON file
      */
-    ScriptSolver();
-
-    /** Read addresses from script
-     */
-    vector<string> getAddressesFromScript(vector<unsigned char> scriptString);
-};
-
+    
+    class CoinParams {
+        public:
+            static void readFromFile(string fileName);
+            static vector<unsigned char> magic;
+            static string bech32Prefix;
+            static unsigned char p2pkhVersion;
+            static unsigned char p2shVersion;
+            ~CoinParams();
+            
+        private:
+            CoinParams() {}
+    };
 }
-
-#endif // SCRIPTSOLVER_H_INCLUDED

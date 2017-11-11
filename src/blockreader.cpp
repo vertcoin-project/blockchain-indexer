@@ -48,13 +48,12 @@ std::vector<unsigned char> VtcBlockIndexer::BlockReader::readRawBlockHeader(stri
 }
     
 
-VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(string fileName, uint64_t filePosition, uint64_t blockHeight, bool testnet, bool headerOnly) {
+VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(string fileName, uint64_t filePosition, uint64_t blockHeight, bool headerOnly) {
     VtcBlockIndexer::Block fullBlock;
 
     fullBlock.fileName = fileName;
     fullBlock.filePosition = filePosition;
     fullBlock.height = blockHeight;
-    fullBlock.testnet = testnet;
     
     stringstream ss;
     ss << blocksDir << "/" << fileName;

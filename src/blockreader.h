@@ -44,7 +44,7 @@ public:
      
     /** Reads the contents of the block that was scanned
      */
-    Block readBlock(std::string fileName, uint64_t filePosition, uint64_t blockHeight, bool testnet, bool headerOnly);
+    Block readBlock(std::string fileName, uint64_t filePosition, uint64_t blockHeight, bool headerOnly);
 
     /** Reads a transaction from an open stream
      */

@@ -92,9 +92,6 @@ void VtcBlockIndexer::BlockFileWatcher::scanBlocks(string fileName) {
         while(blockScanner->moveNext()) {
             this->totalBlocks++;
             VtcBlockIndexer::ScannedBlock block = blockScanner->scanNextBlock();
-            if(block.testnet != mempoolMonitor->testnet) {
-                mempoolMonitor->testnet = block.testnet;
-            }
             // Create an empty vector inside the unordered map if this previousBlockHash
             // was not found before.
             if(this->blocks.find(block.previousBlockHash) == this->blocks.end()) {
@@ -199,7 +196,7 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
         } 
     
         if(!blockIndexer->hasIndexedBlock(bestBlock.blockHash, this->blockHeight)) {
-            VtcBlockIndexer::Block fullBlock = blockReader->readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, bestBlock.testnet, false);
+            VtcBlockIndexer::Block fullBlock = blockReader->readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, false);
            
             blockIndexer->indexBlock(fullBlock);
         }

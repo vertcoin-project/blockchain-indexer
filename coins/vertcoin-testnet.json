@@ -1,0 +1,6 @@
+{
+    "magic" : "76657274",
+    "version_p2pkh" : "4a",
+    "version_p2sh"  : "c4",
+    "prefix_bech32": "tvtc"
+}
