@@ -40,7 +40,7 @@ VtcBlockIndexer::HttpServer::HttpServer(shared_ptr<leveldb::DB> db, shared_ptr<V
     this->mempoolMonitor = mempoolMonitor;
     blockReader.reset(new VtcBlockIndexer::BlockReader(blocksDir));
     scriptSolver = std::make_unique<VtcBlockIndexer::ScriptSolver>();
-    httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@" + std::string(std::getenv("VERTCOIND_HOST")) + ":8332"));
+    httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@" + std::string(std::getenv("COIND_HOST")) + ":8332"));
     vertcoind.reset(new VertcoinClient(*httpClient));
 }
 

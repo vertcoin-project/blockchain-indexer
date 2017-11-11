@@ -1,0 +1,36 @@
+version: "2"
+services:
+
+  bitcoind-main:
+    image: ruimarinho/bitcoin-core
+    restart: always
+    expose:
+      - "8332"
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./data/btc/main/coind:/bitcoin/.bitcoin
+    environment:
+      - RPCUSER=middleware
+      - RPCPASSWORD=middleware
+    command: -rpcport=8332 -server -rpcallowip='0.0.0.0/0' -txindex
+
+  btc-middleware-cpp-main:
+    image: vtc-wallet-middleware
+    restart: always
+    environment:
+      - COIND_HOST=bitcoind-main
+    expose:
+      - "8888"
+    depends_on:
+      - bitcoind-main
+    volumes:
+      - ./data/btc/main/coind/blocks:/blocks
+      - ./data/btc/main/index:/index
+      - ./coins:/coins
+    command: --coinParams=/coins/bitcoin-mainnet.json
+
+networks:    
+  default:
+    external:
+      name: coin-middleware

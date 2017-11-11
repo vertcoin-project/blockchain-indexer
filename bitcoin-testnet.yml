@@ -1,0 +1,36 @@
+version: "2"
+services:
+
+  bitcoind-test:
+    image: kylemanna/bitcoind
+    restart: always
+    expose:
+      - "8332"
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./data/btc/test/coind:/bitcoin/.bitcoin
+    environment:
+      - RPCUSER=middleware
+      - RPCPASSWORD=middleware
+    command: -rpcport=8332 -server -rpcallowip='0.0.0.0/0'  -testnet -txindex
+
+  btc-middleware-cpp-test:
+    image: vtc-wallet-middleware
+    restart: always
+    environment:
+      - COIND_HOST=bitcoind-test
+    expose:
+      - "8888"
+    depends_on:
+      - bitcoind-test
+    volumes:
+      - ./data/btc/test/coind/testnet3/blocks:/blocks
+      - ./data/btc/test/index:/index
+      - ./coins:/coins
+    command: --coinParams=/coins/bitcoin-testnet.json
+
+networks:    
+  default:
+    external:
+      name: coin-middleware

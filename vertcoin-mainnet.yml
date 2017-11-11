@@ -10,23 +10,23 @@ services:
     ports:
       - "5889:5889"
     volumes:
-      - ./data/main/vertcoind:/data
+      - ./data/vtc/main/coind:/data
     command: -rpcuser=middleware -rpcpassword=middleware -addnode=jlovejoy.mit.edu -addnode=gertjaap.ddns.net -txindex
 
   vtc-middleware-cpp-main:
     image: vtc-wallet-middleware
     restart: always
     environment:
-      - VERTCOIND_HOST=vertcoind-main
+      - COIND_HOST=vertcoind-main
     expose:
       - "8888"
     volumes:
-      - ./data/main/vertcoind/blocks:/blocks
-      - ./data/main/index:/index
+      - ./data/vtc/main/coind/blocks:/blocks
+      - ./data/vtc/main/index:/index
       - ./coins:/coins
     command: --coinParams=/coins/vertcoin-mainnet.json
 
 networks:    
   default:
     external:
-      name: vertcoin-middleware
+      name: coin-middleware

@@ -1,0 +1,6 @@
+{
+    "magic" : "f9beb4d9",
+    "version_p2pkh" : "00",
+    "version_p2sh"  : "05",
+    "prefix_bech32": "btc"
+}

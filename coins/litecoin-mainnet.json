@@ -1,0 +1,6 @@
+{
+    "magic" : "fbc0b6db",
+    "version_p2pkh" : "30",
+    "version_p2sh"  : "32",
+    "prefix_bech32": "ltc"
+}

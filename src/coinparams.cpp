@@ -34,6 +34,7 @@ unsigned char VtcBlockIndexer::CoinParams::p2shVersion;
 
 void VtcBlockIndexer::CoinParams::readFromFile(string fileName)
 {
+    cout << "Reading coin params from [" << fileName << "]" << endl;
     ifstream i(fileName);
     json j;
     i >> j;

@@ -1,0 +1,31 @@
+version: "2"
+services:
+
+  litecoind-test:
+    image: uphold/litecoind
+    restart: always
+    expose:
+      - "8332"
+    ports:
+      - "9333:9333"
+    volumes:
+      - ./data/ltc/test/coind:/home/litecoin/.litecoin
+    command: -rpcuser=middleware -rpcpassword=middleware -rpcport=8332 -rpcallowip='0.0.0.0/0'  -testnet -server -txindex
+
+  ltc-middleware-cpp-test:
+    image: vtc-wallet-middleware
+    restart: always
+    environment:
+      - COIND_HOST=litecoind-test
+    expose:
+      - "8888"
+    volumes:
+      - ./data/ltc/test/coind/testnet4/blocks:/blocks
+      - ./data/ltc/test/index:/index
+      - ./coins:/coins
+    command: --coinParams=/coins/litecoin-testnet.json
+
+networks:    
+  default:
+    external:
+      name: coin-middleware
