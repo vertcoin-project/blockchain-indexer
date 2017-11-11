@@ -27,6 +27,7 @@
 #ifndef MEMPOOLMONITOR_H_INCLUDED
 #define MEMPOOLMONITOR_H_INCLUDED
 
+using namespace std;
 
 namespace VtcBlockIndexer {
 
@@ -45,22 +46,22 @@ public:
     void startWatcher();
 
     /** Notify a transaction has been indexed - remove it from the mempool */
-    void transactionIndexed(std::string txid);
+    void transactionIndexed(string txid);
 
     /** Returns the spender txid if an outpoint is spent */
-    std::string outpointSpend(std::string txid, uint32_t vout);
+    string outpointSpend(string txid, uint32_t vout);
 
     /** Returns TXOs in the memorypool matching an address */
-    vector<VtcBlockIndexer::TransactionOutput> getTxos(std::string address);
+    vector<VtcBlockIndexer::TransactionOutput> getTxos(string address);
 
     bool testnet;
 private:
-    std::unique_ptr<VertcoinClient> vertcoind;
-    std::unique_ptr<jsonrpc::HttpClient> httpClient;
+    unique_ptr<VertcoinClient> vertcoind;
+    unique_ptr<jsonrpc::HttpClient> httpClient;
     unordered_map<string, VtcBlockIndexer::Transaction> mempoolTransactions;
-    unordered_map<string, std::vector<VtcBlockIndexer::TransactionOutput>> addressMempoolTransactions;
-    std::unique_ptr<VtcBlockIndexer::BlockReader> blockReader;
-    std::unique_ptr<VtcBlockIndexer::ScriptSolver> scriptSolver;
+    unordered_map<string, vector<VtcBlockIndexer::TransactionOutput>> addressMempoolTransactions;
+    unique_ptr<VtcBlockIndexer::BlockReader> blockReader;
+    unique_ptr<VtcBlockIndexer::ScriptSolver> scriptSolver;
 }; 
 
 }

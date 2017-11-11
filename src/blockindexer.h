@@ -30,6 +30,8 @@
 #include "scriptsolver.h"
 #include "mempoolmonitor.h"
 
+using namespace std;
+
 namespace VtcBlockIndexer {
 
 /**
@@ -43,7 +45,7 @@ class BlockIndexer {
 public:
     /** Constructs a BlockIndexer instance using the given block data directory
      */
-    BlockIndexer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor);
+    BlockIndexer(const shared_ptr<leveldb::DB> db, const shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor);
 
     /** Indexes the contents of the block
      */
@@ -53,22 +55,22 @@ public:
      * in the index at the passed blockheight. No need to reindex
      * in that case.
      */
-    bool hasIndexedBlock(std::string blockHash, int blockHeight);
+    bool hasIndexedBlock(string blockHash, int blockHeight);
 
 private:
     /** Removes TXOs and spends from a particular blockhash 
      * in case of a reorg */
 
-    bool clearBlockTxos(std::string blockHash);
+    bool clearBlockTxos(string blockHash);
     /** Returns the next index to use for storing the TXO
      */
-    int getNextTxoIndex(std::string prefix);
+    int getNextTxoIndex(string prefix);
 
-    leveldb::DB* db;
-    VtcBlockIndexer::MempoolMonitor* mempoolMonitor;
+    shared_ptr<leveldb::DB> db;
+    shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor;
 
     // Reference to the scriptsolver class
-    VtcBlockIndexer::ScriptSolver scriptSolver;
+    unique_ptr<VtcBlockIndexer::ScriptSolver> scriptSolver;
 };
 
 }

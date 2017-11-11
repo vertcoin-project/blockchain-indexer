@@ -34,11 +34,12 @@ using namespace restbed;
 using json = nlohmann::json;
 
 
-VtcBlockIndexer::HttpServer::HttpServer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor, string blocksDir) : blockReader("") {
-    this->db = dbInstance;
+VtcBlockIndexer::HttpServer::HttpServer(shared_ptr<leveldb::DB> db, shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor, string blocksDir) {
+    this->db = db;
     this->blocksDir = blocksDir;
-    this->blockReader = VtcBlockIndexer::BlockReader(blocksDir);
     this->mempoolMonitor = mempoolMonitor;
+    blockReader.reset(new VtcBlockIndexer::BlockReader(blocksDir));
+    scriptSolver = std::make_unique<VtcBlockIndexer::ScriptSolver>();
     httpClient.reset(new jsonrpc::HttpClient("http://middleware:middleware@" + std::string(std::getenv("VERTCOIND_HOST")) + ":8332"));
     vertcoind.reset(new VertcoinClient(*httpClient));
 }
@@ -108,7 +109,7 @@ void VtcBlockIndexer::HttpServer::getTransactionProof(const shared_ptr<Session> 
         if(filePosition.size() > 24) {
             testnet = (stoi(filePosition.substr(24)) == 1);
         }
-        Block block = this->blockReader.readBlock(filePosition.substr(0,12),stoll(filePosition.substr(12,12)),i,testnet,true);
+        Block block = this->blockReader->readBlock(filePosition.substr(0,12),stoll(filePosition.substr(12,12)),i,testnet,true);
 
         json jsonBlock;
         jsonBlock["blockHash"] = block.blockHash;

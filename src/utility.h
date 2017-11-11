@@ -21,6 +21,8 @@
 #include <vector>
 #include <string>
 
+using namespace std;
+
 namespace VtcBlockIndexer {
     
     /**
@@ -33,21 +35,21 @@ namespace VtcBlockIndexer {
              * 
              * @param input the value to hash
              */
-            static std::vector<unsigned char> sha256(std::vector<unsigned char> input);
-            static std::string hashToHex(std::vector<unsigned char> hash);
-            static std::string hashToReverseHex(std::vector<unsigned char> hash);
-            static std::vector<unsigned char> decompressPubKey(std::vector<unsigned char> compressedKey);
-            static std::vector<unsigned char> publicKeyToAddress(std::vector<unsigned char> publicKey, bool testnet);
-            static std::vector<unsigned char> ripeMD160(std::vector<unsigned char> in);
-            static std::vector<unsigned char> base58(std::vector<unsigned char> in);
-            static std::vector<unsigned char> ripeMD160ToP2PKAddress(std::vector<unsigned char> ripeMD, bool testnet);
-            static std::vector<unsigned char> ripeMD160ToP2SHAddress(std::vector<unsigned char> ripeMD, bool testnet);
-            static std::vector<unsigned char> bech32Address(std::vector<unsigned char> in, bool testnet);
-            static std::vector<unsigned char> hexToBytes(std::string hex);
+            static vector<unsigned char> sha256(vector<unsigned char> input);
+            static string hashToHex(vector<unsigned char> hash);
+            static string hashToReverseHex(vector<unsigned char> hash);
+            static vector<unsigned char> decompressPubKey(vector<unsigned char> compressedKey);
+            static vector<unsigned char> publicKeyToAddress(vector<unsigned char> publicKey, bool testnet);
+            static vector<unsigned char> ripeMD160(vector<unsigned char> in);
+            static vector<unsigned char> base58(vector<unsigned char> in);
+            static vector<unsigned char> ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD, bool testnet);
+            static vector<unsigned char> ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD, bool testnet);
+            static vector<unsigned char> bech32Address(vector<unsigned char> in, bool testnet);
+            static vector<unsigned char> hexToBytes(string hex);
             ~Utility();
             
         private:
-            static std::vector<unsigned char> ripeMD160ToAddress(unsigned char versionByte, std::vector<unsigned char> ripeMD);
+            static vector<unsigned char> ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD);
             static void initECCContextIfNeeded();
             Utility() {}
     };

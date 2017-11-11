@@ -41,20 +41,30 @@
 using namespace std;
 
 
-leveldb::DB *db;
-VtcBlockIndexer::HttpServer httpServer(nullptr,nullptr,"");
-VtcBlockIndexer::BlockFileWatcher blockFileWatcher("",nullptr, nullptr);
-VtcBlockIndexer::MempoolMonitor mempoolMonitor;
+shared_ptr<leveldb::DB> database;
+shared_ptr<VtcBlockIndexer::HttpServer> httpServer;
+shared_ptr<VtcBlockIndexer::BlockFileWatcher> blockFileWatcher;
+shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor;
 
-void runBlockfileWatcher(string blocksDir) {
+void runBlockfileWatcher() {
     cout << "Starting blockfile watcher..." << endl;
-    blockFileWatcher = VtcBlockIndexer::BlockFileWatcher(blocksDir, db, &mempoolMonitor);
-    blockFileWatcher.startWatcher();
+    blockFileWatcher->startWatcher();
 }
 
 void runMempoolMonitor() {
     cout << "Starting mempool monitor..." << endl;
-    mempoolMonitor.startWatcher();
+    mempoolMonitor->startWatcher();
+}
+
+void openDatabase() {
+    leveldb::DB* db;
+    leveldb::Options options;
+    options.create_if_missing = true;
+    options.block_cache = leveldb::NewLRUCache(300 * 1024 * 1024);
+    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
+    leveldb::Status status = leveldb::DB::Open(options, "/index", &db);
+    assert(status.ok());
+    database.reset(db);
 }
 
 
@@ -65,20 +75,19 @@ int main(int argc, char* argv[]) {
         exit(0);
     }
 
-    leveldb::Options options;
-    options.create_if_missing = true;
-    options.block_cache = leveldb::NewLRUCache(300 * 1024 * 1024);
-    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
-    leveldb::Status status = leveldb::DB::Open(options, "/index", &db);
-    assert(status.ok());
+    openDatabase();
 
-    // Start blockfile watcher on separate thread
-    std::thread watcherThread(runBlockfileWatcher, string(argv[1]));   
-    
-    // Start blockfile watcher on separate thread
+    // Start memory pool monitor on a separate thread
+    mempoolMonitor = make_shared<VtcBlockIndexer::MempoolMonitor>();
     std::thread mempoolThread(runMempoolMonitor);   
     
+     
+    // Start blockfile watcher on separate thread
+    blockFileWatcher.reset(new VtcBlockIndexer::BlockFileWatcher(string(argv[1]), database, mempoolMonitor));
+    std::thread watcherThread(runBlockfileWatcher);   
+    
+   
     // Start webserver on main thread.
-    httpServer = VtcBlockIndexer::HttpServer(db, &mempoolMonitor, string(argv[1]));
-    httpServer.run(); 
+    httpServer.reset(new VtcBlockIndexer::HttpServer(database, mempoolMonitor, string(argv[1])));
+    httpServer->run(); 
 }

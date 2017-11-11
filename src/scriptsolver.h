@@ -26,6 +26,7 @@
 #include <fstream>
 
 #include "blockchaintypes.h"
+using namespace std;
 
 namespace VtcBlockIndexer {
 

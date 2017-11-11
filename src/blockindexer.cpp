@@ -36,10 +36,10 @@ unordered_map<string, int> nextTxoIndex;
 
 
 
-VtcBlockIndexer::BlockIndexer::BlockIndexer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor) {
-    this->db = dbInstance;
+VtcBlockIndexer::BlockIndexer::BlockIndexer(const shared_ptr<leveldb::DB> db, const shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor) {
+    this->db = db;
     this->mempoolMonitor = mempoolMonitor;
-    this->scriptSolver = VtcBlockIndexer::ScriptSolver();
+    this->scriptSolver = make_unique<VtcBlockIndexer::ScriptSolver>();
 }
 
 
@@ -108,7 +108,7 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
 }
 
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
-    this->scriptSolver.testnet = block.testnet;
+    this->scriptSolver->testnet = block.testnet;
     
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
@@ -186,7 +186,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
 
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
-            vector<string> addresses = this->scriptSolver.getAddressesFromScript(out.script);
+            vector<string> addresses = this->scriptSolver->getAddressesFromScript(out.script);
             for(string address : addresses) {
                 int nextIndex = getNextTxoIndex(address + "-txo");
                 stringstream txoKey;

@@ -28,32 +28,23 @@
 #include <iomanip>
 #include <unordered_map>
 #include "blockscanner.h"
-#include "blockindexer.h"
-#include "blockreader.h"
+
 #include <chrono>
 #include <thread>
 #include <time.h>
 
-// Block reader object used for reading the contents of blocks
-VtcBlockIndexer::BlockReader blockReader("");
-
-// Block indexer object used to pass blocks and store in the index
-VtcBlockIndexer::BlockIndexer blockIndexer(nullptr, nullptr);
-
 using namespace std;
 
 // Constructor
-VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor) {
-    this->db = dbInstance;
+VtcBlockIndexer::BlockFileWatcher::BlockFileWatcher(string blocksDir, const shared_ptr<leveldb::DB> db, const shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor) {
+    this->db = db;
     this->mempoolMonitor = mempoolMonitor;
-    blockIndexer = VtcBlockIndexer::BlockIndexer(this->db, this->mempoolMonitor);
-    blockReader = VtcBlockIndexer::BlockReader(blocksDir);
+    blockIndexer.reset(new VtcBlockIndexer::BlockIndexer(this->db, this->mempoolMonitor));
+    blockReader.reset(new VtcBlockIndexer::BlockReader(blocksDir));
     this->blocksDir = blocksDir;
     this->maxLastModified.tv_sec = 0;
     this->maxLastModified.tv_nsec = 0;
 }
-
-
 
 void VtcBlockIndexer::BlockFileWatcher::startWatcher() {
     DIR *dir;
@@ -207,10 +198,10 @@ string VtcBlockIndexer::BlockFileWatcher::processNextBlock(string prevBlockHash)
             bestBlock = findLongestChain(matchingBlocks);
         } 
     
-        if(!blockIndexer.hasIndexedBlock(bestBlock.blockHash, this->blockHeight)) {
-            VtcBlockIndexer::Block fullBlock = blockReader.readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, bestBlock.testnet, false);
+        if(!blockIndexer->hasIndexedBlock(bestBlock.blockHash, this->blockHeight)) {
+            VtcBlockIndexer::Block fullBlock = blockReader->readBlock(bestBlock.fileName, bestBlock.filePosition, this->blockHeight, bestBlock.testnet, false);
            
-            blockIndexer.indexBlock(fullBlock);
+            blockIndexer->indexBlock(fullBlock);
         }
         return bestBlock.blockHash;
 

@@ -35,7 +35,6 @@
 using namespace std;
 using namespace restbed;
 
-
 namespace VtcBlockIndexer {
     
     /**
@@ -45,7 +44,7 @@ namespace VtcBlockIndexer {
     
     class HttpServer {
         public:
-            HttpServer(leveldb::DB* dbInstance, VtcBlockIndexer::MempoolMonitor* mempoolMonitor, std::string blocksDir);
+            HttpServer(const shared_ptr<leveldb::DB> db, const shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor, string blocksDir);
             void run();
             /* REST Api for returning the balance of a given address */
             void addressBalance( const shared_ptr< Session > session );
@@ -75,15 +74,15 @@ namespace VtcBlockIndexer {
             void sendRawTransaction( const shared_ptr< Session > session );
             
         private:
-            leveldb::DB* db;
-            std::unique_ptr<VertcoinClient> vertcoind;
-            std::unique_ptr<jsonrpc::HttpClient> httpClient;
-            VtcBlockIndexer::BlockReader blockReader;
-            VtcBlockIndexer::ScriptSolver scriptSolver;
-            VtcBlockIndexer::MempoolMonitor* mempoolMonitor;
-    /** Directory containing the blocks
-     */
-    std::string blocksDir; 
+            shared_ptr<leveldb::DB> db;
+            unique_ptr<VertcoinClient> vertcoind;
+            unique_ptr<jsonrpc::HttpClient> httpClient;
+            unique_ptr<VtcBlockIndexer::BlockReader> blockReader;
+            unique_ptr<VtcBlockIndexer::ScriptSolver> scriptSolver;
+            shared_ptr<VtcBlockIndexer::MempoolMonitor> mempoolMonitor;
+            /** Directory containing the blocks
+             */
+            string blocksDir; 
 
     };
 }
