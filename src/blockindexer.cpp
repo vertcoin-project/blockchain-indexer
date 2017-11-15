@@ -111,7 +111,6 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
 
-    cout << "Indexing block " << block.height << " (" << block.blockHash << ")" << endl;
     string existingBlockHash;
     leveldb::Status s = this->db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
 
