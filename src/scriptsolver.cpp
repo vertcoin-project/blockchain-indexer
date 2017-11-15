@@ -54,6 +54,8 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         parsed = true;
     }
 
+   
+
     // Output script commonly found in block reward TX, that pays to an explicit pubKey
     if(
             67==scriptSize                &&  
@@ -99,13 +101,25 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         parsed = true;
     }
 
-    // NULLDATA script. starts with 0 Not needed to be stored in UTXO database. So Ignore.
+    // NULLDATA script. starts with OP_RETURN followed by arbitrary data and no further opcodes. Not needed to be stored in UTXO database. So Ignore.
     if(
-        scriptSize > 0          && 
-        scriptSize <= 42        &&
-        0x6A == script.at(0)
+        scriptSize > 1          && 
+        0x6A == script.at(0)    
     ) {
-        parsed = true;
+        uint32_t pos = 1;
+        
+        bool foundOpcodes = false;
+        while(pos < script.size()) {
+            if(script.at(pos) >= 0x01 && script.at(pos) <= 0x4B) { 
+                pos += script.at(pos) + 1;
+            } else {
+                foundOpcodes = true;
+                break;
+            } 
+        }
+
+        if(!foundOpcodes)
+            parsed = true;
     }
 
     // A modern output script type, that pays to hash160(script)
@@ -118,10 +132,69 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         
     ) {
 
-        // TODO: distill the address and add it to the return array.
         vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]));    
         addresses.push_back(string(address.begin(), address.end()));
         parsed = true;
+    }
+
+    // OP_PUSHDATA(32) + data only (Found in litecoin chain - nonstandard script)
+    // Public block explorers show these as "unknown" (https://bchain.info/LTC/tx/265278e51d1b29cdce906a858251b7ce15e2dab09de7dede0acb4c629f780b91)
+    if(
+        
+            33==scriptSize                  &&
+            0x20==script.at(0)             
+            
+        
+    ) {
+        
+        parsed = true;
+    }
+
+    // OP_PUSHDATA(36) + data only (Found in litecoin chain - nonstandard script)
+    // Public block explorers show these as "unknown" (http://explorer.litecoin.net/tx/936e8ed1cfca736320fdced61c2d03886b232497ea975e41d101f1d83bb74c44)
+    if(
+        
+            37==scriptSize                  &&
+            0x24==script.at(0)             
+            
+        
+    ) {
+        
+        parsed = true;
+    }
+
+    // Unknown (seems malformed) output script found on Litecoin in p2pool blocks
+    // For example https://bchain.info/LTC/tx/8f1220670b5d4ade8f9c6a82fde3d88a28d2e1c290f2edc6d7a7a13aa0352fc7 
+    if(
+        6 == scriptSize                &&
+            0x73==script.at(0)             &&  // OP_IFDUP
+            0x63==script.at(1)             &&  // OP_IF
+            0x72==script.at(2)             &&  // OP_2SWAP
+            0x69==script.at(3)             &&  // OP_VERIFY
+            0x70==script.at(4)             &&  // OP_2OVER
+            0x74==script.at(5)              // OP_DEPTH
+            
+        
+    ) {
+
+        parsed = true;
+    }
+
+    if(isMultiSig(script)) {
+        uint32_t pos = 1;
+        while(pos < script.size()-2) {
+            if(script.at(pos) == 0x21) {
+                vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[pos+1], &script[pos+34]));   
+                addresses.push_back(string(address.begin(), address.end())); 
+                pos += 34;
+                parsed = true;
+            }
+            else
+            {
+                pos = script.size();
+            }
+        }
+        
     }
 
 
@@ -184,4 +257,14 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
     }
 
     return addresses;*/
+}
+
+bool VtcBlockIndexer::ScriptSolver::isMultiSig(vector<unsigned char> script) {
+    return (script.at(script.size()-1) == 0xAE);
+}
+
+int VtcBlockIndexer::ScriptSolver::requiredSignatures(vector<unsigned char> script) {
+    if(!isMultiSig(script)) return -1;
+
+    return (int)script.at(0);
 }

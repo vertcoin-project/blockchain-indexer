@@ -44,6 +44,14 @@ public:
     /** Read addresses from script
      */
     vector<string> getAddressesFromScript(vector<unsigned char> scriptString);
+
+    /** Returns if the script is multisig
+     */
+    bool isMultiSig(vector<unsigned char> scriptString);
+
+    /** Returns the number of required signatures
+     */
+    int requiredSignatures(vector<unsigned char> scriptString);
 };
 
 }

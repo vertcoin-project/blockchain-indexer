@@ -111,6 +111,7 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
 
+    cout << "Indexing block " << block.height << " (" << block.blockHash << ")" << endl;
     string existingBlockHash;
     leveldb::Status s = this->db->Get(leveldb::ReadOptions(), ss.str(), &existingBlockHash);
 
@@ -185,6 +186,14 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = this->scriptSolver->getAddressesFromScript(out.script);
+            if(addresses.size() > 1) {
+                if(scriptSolver->isMultiSig(out.script)) {
+                    stringstream txoMultiSigKey;
+                    txoMultiSigKey << "multisigtx-" << tx.txHash << "-" << setw(8) << setfill('0') << out.index;
+                    this->db->Put(leveldb::WriteOptions(), txoMultiSigKey.str(), std::to_string(scriptSolver->requiredSignatures(out.script)));
+                    cout << "Wrote multisig tx " << txoMultiSigKey.str() << endl;
+                }
+            }
             for(string address : addresses) {
                 int nextIndex = getNextTxoIndex(address + "-txo");
                 stringstream txoKey;
