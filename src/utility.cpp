@@ -27,9 +27,9 @@
 #include <vector>
 #include <secp256k1.h>
 #include "crypto/ripemd160.h"
-#include "crypto/base58.h"
 #include "crypto/bech32.h"
 #include "coinparams.h"
+#include <assert.h>     /* assert */
 
 using namespace std;
 
@@ -124,26 +124,29 @@ vector<unsigned char> VtcBlockIndexer::Utility::decompressPubKey(vector<unsigned
 }     
 
 
-vector<unsigned char> VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
-    vector<unsigned char> hashedKey = sha256(publicKey);
+string VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char> publicKey) {
+    vector<unsigned char> hashedKey = sha256(publicKey);    
     vector<unsigned char> ripeMD = ripeMD160(hashedKey);
+
     return ripeMD160ToP2PKAddress(ripeMD);
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD) {
+string VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD) {
     return ripeMD160ToAddress(VtcBlockIndexer::CoinParams::p2pkhVersion, ripeMD);
 }
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD) {
+string VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD) {
     return ripeMD160ToAddress(VtcBlockIndexer::CoinParams::p2shVersion, ripeMD);
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD) {
+string VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD) {
     ripeMD.insert(ripeMD.begin(), versionByte);
     vector<unsigned char> doubleHashedRipeMD = sha256(sha256(ripeMD));
     for(int i = 0; i < 4; i++) {
         ripeMD.push_back(doubleHashedRipeMD.at(i));
     }
-    return base58(ripeMD);
+    string returnValue = base58(ripeMD);
+    return returnValue;
+
 }
 
 vector<unsigned char> VtcBlockIndexer::Utility::hexToBytes(const std::string hex) {
@@ -164,28 +167,58 @@ vector<unsigned char> VtcBlockIndexer::Utility::ripeMD160(vector<unsigned char> 
     return vector<unsigned char>(hash, hash + CRIPEMD160::OUTPUT_SIZE);
 }
 
+static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-vector<unsigned char> VtcBlockIndexer::Utility::base58(vector<unsigned char> in) {
-    
-    std::unique_ptr<char> b58(new char[80]);
-    size_t size = 80;
-    if(!b58enc(b58.get(), &size, in.data(), in.size())) {
-        return {};
+std::string VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
+{
+    unsigned char* pbegin = &in[0];
+    unsigned char* pend = &in[in.size()-1];
+
+    // Skip & count leading zeroes.
+    int zeroes = 0;
+    int length = 0;
+    while (pbegin != pend && *pbegin == 0) {
+        pbegin++;
+        zeroes++;
     }
-    else 
-    {
-        return vector<unsigned char>(b58.get(), b58.get() + size-1); // -1 strips trailing 0 byte
+    // Allocate enough space in big-endian base58 representation.
+    int size = (pend - pbegin) * 138 / 100 + 1; // log(256) / log(58), rounded up.
+    std::vector<unsigned char> b58(size);
+    // Process the bytes.
+    while (pbegin != pend) {
+        int carry = *pbegin;
+        int i = 0;
+        // Apply "b58 = b58 * 256 + ch".
+        for (std::vector<unsigned char>::reverse_iterator it = b58.rbegin(); (carry != 0 || i < length) && (it != b58.rend()); it++, i++) {
+            carry += 256 * (*it);
+            *it = carry % 58;
+            carry /= 58;
+        }
+
+        assert(carry == 0);
+        length = i;
+        pbegin++;
     }
+    // Skip leading zeroes in base58 result.
+    std::vector<unsigned char>::iterator it = b58.begin() + (size - length);
+    while (it != b58.end() && *it == 0)
+        it++;
+    // Translate the result into a string.
+    std::string str;
+    str.reserve(zeroes + (b58.end() - it));
+    str.assign(zeroes, '1');
+    while (it != b58.end())
+        str += pszBase58[*(it++)];
+    return str;
 }
 
-vector<unsigned char> VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in) {
+string VtcBlockIndexer::Utility::bech32Address(vector<unsigned char> in) {
     vector<unsigned char> enc;
     enc.push_back(0); // witness version
     if(convertbits<8, 5, true>(enc, in)) {
-        string address = bech32::Encode(VtcBlockIndexer::CoinParams::bech32Prefix, enc);
-        return vector<unsigned char>(address.begin(), address.end());
+        return bech32::Encode(VtcBlockIndexer::CoinParams::bech32Prefix, enc);
     }
     else{
-        return {};
+        return "";
     }
 }

@@ -82,7 +82,6 @@ VtcBlockIndexer::Block VtcBlockIndexer::BlockReader::readBlock(string fileName, 
         // Find number of transactions
         blockFile.seekg(filePosition+80, ios_base::beg);
         uint64_t txCount = VtcBlockIndexer::FileReader::readVarInt(blockFile);
-        
         fullBlock.transactions = {};
         for(uint64_t tx = 0; tx < txCount; tx++) {
             VtcBlockIndexer::Transaction transaction = readTransaction(blockFile);

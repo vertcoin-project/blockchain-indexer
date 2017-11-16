@@ -29,7 +29,7 @@ endif
 
 PLATFORMCXXFLAGS += -g -Wall -std=c++14 -O3 -Wl,-E 
 
-INDEXERSRC = src/main.cpp src/blockfilewatcher.cpp src/coinparams.cpp src/byte_array_buffer.cpp src/blockscanner.cpp src/scriptsolver.cpp src/httpserver.cpp src/utility.cpp src/blockreader.cpp src/filereader.cpp src/mempoolmonitor.cpp src/blockindexer.cpp src/crypto/ripemd160.cpp src/crypto/base58.cpp src/crypto/bech32.cpp
+INDEXERSRC = src/main.cpp src/blockfilewatcher.cpp src/coinparams.cpp src/byte_array_buffer.cpp src/blockscanner.cpp src/scriptsolver.cpp src/httpserver.cpp src/utility.cpp src/blockreader.cpp src/filereader.cpp src/mempoolmonitor.cpp src/blockindexer.cpp src/crypto/ripemd160.cpp src/crypto/bech32.cpp
 INDEXEROBJS = $(INDEXERSRC:.cpp=.cpp.o)
 
 INDEXERLDFLAGS = $(BINFLAGS) -lrestbed -lcrypto -ldl -pthread -lleveldb -lssl -lsecp256k1 -ljsonrpccpp-client -ljsonrpccpp-common -ljsoncpp

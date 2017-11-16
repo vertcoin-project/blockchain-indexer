@@ -17,7 +17,6 @@ services:
 
   btc-middleware-cpp-test:
     image: vtc-wallet-middleware
-    restart: always
     environment:
       - COIND_HOST=bitcoind-test
     expose:

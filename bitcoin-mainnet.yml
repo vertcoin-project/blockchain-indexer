@@ -2,7 +2,7 @@ version: "2"
 services:
 
   bitcoind-main:
-    image: ruimarinho/bitcoin-core
+    image: kylemanna/bitcoind
     restart: always
     expose:
       - "8332"
@@ -17,7 +17,6 @@ services:
 
   btc-middleware-cpp-main:
     image: vtc-wallet-middleware
-    restart: always
     environment:
       - COIND_HOST=bitcoind-main
     expose:

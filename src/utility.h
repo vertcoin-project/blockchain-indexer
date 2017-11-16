@@ -39,17 +39,17 @@ namespace VtcBlockIndexer {
             static string hashToHex(vector<unsigned char> hash);
             static string hashToReverseHex(vector<unsigned char> hash);
             static vector<unsigned char> decompressPubKey(vector<unsigned char> compressedKey);
-            static vector<unsigned char> publicKeyToAddress(vector<unsigned char> publicKey);
+            static string publicKeyToAddress(vector<unsigned char> publicKey);
             static vector<unsigned char> ripeMD160(vector<unsigned char> in);
-            static vector<unsigned char> base58(vector<unsigned char> in);
-            static vector<unsigned char> ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD);
-            static vector<unsigned char> ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD);
-            static vector<unsigned char> bech32Address(vector<unsigned char> in);
+            static string base58(vector<unsigned char> in);
+            static string ripeMD160ToP2PKAddress(vector<unsigned char> ripeMD);
+            static string ripeMD160ToP2SHAddress(vector<unsigned char> ripeMD);
+            static string bech32Address(vector<unsigned char> in);
             static vector<unsigned char> hexToBytes(string hex);
             ~Utility();
             
         private:
-            static vector<unsigned char> ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD);
+            static string ripeMD160ToAddress(unsigned char versionByte, vector<unsigned char> ripeMD);
             static void initECCContextIfNeeded();
             Utility() {}
     };

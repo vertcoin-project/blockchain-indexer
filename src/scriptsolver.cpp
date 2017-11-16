@@ -40,21 +40,45 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
     // The most common output script type that pays to hash160(pubKey)
     if(
         
-            25==scriptSize                  &&
+            (25==scriptSize                  &&
             0x76==script.at(0)              &&  // OP_DUP
             0xA9==script.at(1)              &&  // OP_HASH160
               20==script.at(2)              &&  // OP_PUSHDATA(20)
-            0x88==script.at(scriptSize-2)   &&  // OP_EQUALVERIFY
-            0xAC==script.at(scriptSize-1)     // OP_CHECKSIG
+            
+            (0x88==script.at(scriptSize-2)   &&  // OP_EQUALVERIFY
+            0xAC==script.at(scriptSize-1)))      // OP_CHECKSIG
+
+            ||
+// scripts appended with OP_NOP1. Since OP_NOP1 does nothing, this should still be valid.
+
+            (25==scriptSize                  &&
+                0x76==script.at(0)              &&  // OP_DUP
+                0xA9==script.at(1)              &&  // OP_HASH160
+                  20==script.at(2)              &&  // OP_PUSHDATA(20)
+                
+                (0x88==script.at(scriptSize-2)   &&  // OP_EQUALVERIFY
+                0xB0==script.at(scriptSize-1)))      // OP_NOP1
+    
+                ||
+
+            // scripts appended with OP_NOP. Since OP_NOP does nothing, this should still be valid.
+
+            (26==scriptSize                  &&
+            0x76==script.at(0)              &&  // OP_DUP
+            0xA9==script.at(1)              &&  // OP_HASH160
+              20==script.at(2)              &&  // OP_PUSHDATA(20)
+
+            
+            (0x88==script.at(scriptSize-3)   &&  // OP_EQUALVERIFY
+            0xAC==script.at(scriptSize-2)   &&  // OP_CHECKSIG
+            0x61==script.at(scriptSize-1)))     // OP_NOP
+            
               
         
-    ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char>(&script[3], &script[23]));    
-        addresses.push_back(string(address.begin(), address.end()));
+    ) { 
+        addresses.push_back(VtcBlockIndexer::Utility::ripeMD160ToP2PKAddress(vector<unsigned char>(&script[3], &script[23])));
         parsed = true;
     }
-
-   
 
     // Output script commonly found in block reward TX, that pays to an explicit pubKey
     if(
@@ -63,8 +87,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
             0xAC==script.at(scriptSize-1) // OP_CHECKSIG
               
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[66]));    
-        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back(VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[66])));
         parsed = true;
     }
 
@@ -74,19 +97,17 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x21==script.at(0)            &&  // OP_PUSHDATA(33)
         0xAC==script.at(scriptSize-1)     // OP_CHECKSIG
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34]));    
-        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back(VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[1], &script[34])));
         parsed = true;
     }
-
+    
     // P2WSH
     if(
         22 == scriptSize            &&
         0x00 == script.at(0)        &&  
         0x14 == script.at(1)        
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[22]));    
-        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back(VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[22])));
         parsed = true;
     }
 
@@ -96,14 +117,13 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         0x00 == script.at(0)        &&  
         0x20 == script.at(1)        
     ) {
-        vector<unsigned char> address = VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[34]));    
-        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back(VtcBlockIndexer::Utility::bech32Address(vector<unsigned char>(&script[2], &script[34])));
         parsed = true;
     }
 
     // NULLDATA script. starts with OP_RETURN followed by arbitrary data and no further opcodes. Not needed to be stored in UTXO database. So Ignore.
     if(
-        scriptSize > 1          && 
+        scriptSize > 0        && 
         0x6A == script.at(0)    
     ) {
         uint32_t pos = 1;
@@ -131,9 +151,7 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
               
         
     ) {
-
-        vector<unsigned char> address = VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22]));    
-        addresses.push_back(string(address.begin(), address.end()));
+        addresses.push_back(VtcBlockIndexer::Utility::ripeMD160ToP2SHAddress(vector<unsigned char>(&script[2], &script[22])));
         parsed = true;
     }
 
@@ -163,6 +181,20 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         parsed = true;
     }
 
+    // OP_PUSHDATA(20) + data only. Unparseable (BTC)
+    // Public block explorers show these as "unknown" (https://blockchain.info/tx/b8fd633e7713a43d5ac87266adc78444669b987a56b3a65fb92d58c2c4b0e84d)
+    if(
+        
+            24==scriptSize                  &&
+            0x14==script.at(0)             
+            
+        
+    ) {
+        
+        parsed = true;
+    }
+
+
     // Unknown (seems malformed) output script found on Litecoin in p2pool blocks
     // For example https://bchain.info/LTC/tx/8f1220670b5d4ade8f9c6a82fde3d88a28d2e1c290f2edc6d7a7a13aa0352fc7 
     if(
@@ -184,9 +216,13 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         uint32_t pos = 1;
         while(pos < script.size()-2) {
             if(script.at(pos) == 0x21) {
-                vector<unsigned char> address = VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[pos+1], &script[pos+34]));   
-                addresses.push_back(string(address.begin(), address.end())); 
+                addresses.push_back(VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[pos+1], &script[pos+34]))); 
                 pos += 34;
+                parsed = true;
+            }
+            else if(script.at(pos) == 0x41) {
+                addresses.push_back(VtcBlockIndexer::Utility::publicKeyToAddress(vector<unsigned char>(&script[pos+1], &script[pos+66])));
+                pos += 66;
                 parsed = true;
             }
             else
@@ -196,6 +232,20 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         }
         
     }
+
+    // A challenge: anyone who can find X such that 0==RIPEMD160(X) stands to earn a bunch of coins
+    
+    if(
+        0x76==script[0] &&                  // OP_DUP
+        0xA9==script[1] &&                  // OP_HASH160
+        0x00==script[2] &&                  // OP_0
+        0x88==script[3] &&                  // OP_EQUALVERIFY
+        0xAC==script[4]                     // OP_CHECKSIG
+    ) {
+        parsed = true;
+    }
+
+
 
 
     if(!parsed) {
@@ -245,21 +295,12 @@ vector<string> VtcBlockIndexer::ScriptSolver::getAddressesFromScript(vector<unsi
         return -3;
     }
 
-    // A challenge: anyone who can find X such that 0==RIPEMD160(X) stands to earn a bunch of coins
-    if(
-        0x76==script[0] &&                  // OP_DUP
-        0xA9==script[1] &&                  // OP_HASH160
-        0x00==script[2] &&                  // OP_0
-        0x88==script[3] &&                  // OP_EQUALVERIFY
-        0xAC==script[4]                     // OP_CHECKSIG
-    ) {
-        return -4;
-    }
-
+    
     return addresses;*/
 }
 
 bool VtcBlockIndexer::ScriptSolver::isMultiSig(vector<unsigned char> script) {
+    if(script.size() == 0) return false;
     return (script.at(script.size()-1) == 0xAE);
 }
 
