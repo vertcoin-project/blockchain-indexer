@@ -271,6 +271,8 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
     
     int txHashOnly = stoi(request->get_query_parameter("txHashOnly","0"));
     int raw = stoi(request->get_query_parameter("raw","0"));
+    int unspent = stoi(request->get_query_parameter("unspent","0"));
+    int unconfirmed = stoi(request->get_query_parameter("unconfirmed","0"));
     
     cout << "Fetching address txos for address " << request->get_path_parameter( "address" ) << endl;
    
@@ -292,6 +294,24 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
             json txoObj;
             txoObj["height"] = block;
 
+            if(!s.ok()) {
+                if(unconfirmed) {
+                    string spender = mempoolMonitor->outpointSpend(txo.substr(0,64), stol(txo.substr(64,8)));
+                    if(spender.compare("") == 0) {
+                        txoObj["spender"] = nullptr;
+                    } else {
+                        if(unspent == 1) continue;
+                        txoObj["spender"] = spender;
+                    }
+                } else { 
+                    txoObj["spender"] = nullptr;
+                }
+            } else {
+                if(unspent == 1) continue;
+                txoObj["spender"] = spentTx.substr(65, 64);
+
+            }
+
             if(raw != 0) {
                 try {
                     const Json::Value tx = vertcoind->getrawtransaction(txo.substr(0,64), false);
@@ -302,17 +322,7 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
                 }
             }
 
-            if(!s.ok()) {
-                string spender = mempoolMonitor->outpointSpend(txo.substr(0,64), stol(txo.substr(64,8)));
-                if(spender.compare("") == 0) {
-                    txoObj["spender"] = nullptr;
-                } else {
-                    txoObj["spender"] = spender;
-                }
-               
-            } else {
-                txoObj["spender"] = spentTx.substr(65, 64);
-            }
+           
 
             if(raw != 0 && txoObj["spender"].is_string()) {
                 try {
@@ -331,28 +341,30 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
                 txoObj["vout"] = stoll(txo.substr(64,8));
                 txoObj["value"] = stoll(txo.substr(80));
             }
-
+            
             j.push_back(txoObj);
         }
     }
     assert(it->status().ok());  // Check for any errors found during the scan
     delete it;
 
-    // Add mempool transactions
-    vector<VtcBlockIndexer::TransactionOutput> mempoolOutputs = mempoolMonitor->getTxos(request->get_path_parameter( "address" ));
-    for (VtcBlockIndexer::TransactionOutput txo : mempoolOutputs) {
-        json txoObj;
-        txoObj["txhash"] = txo.txHash;
-        txoObj["vout"] = txo.index;
-        txoObj["value"] = txo.value;
-        txoObj["block"] = 0;
-        string spender = mempoolMonitor->outpointSpend(txo.txHash, txo.index);
-        if(spender.compare("") != 0) {
-            txoObj["spender"] = spender;
-        } else {
-            txoObj["spender"] = nullptr;
+    if(unconfirmed == 1) {
+        // Add mempool transactions
+        vector<VtcBlockIndexer::TransactionOutput> mempoolOutputs = mempoolMonitor->getTxos(request->get_path_parameter( "address" ));
+        for (VtcBlockIndexer::TransactionOutput txo : mempoolOutputs) {
+            json txoObj;
+            txoObj["txhash"] = txo.txHash;
+            txoObj["vout"] = txo.index;
+            txoObj["value"] = txo.value;
+            txoObj["block"] = 0;
+            string spender = mempoolMonitor->outpointSpend(txo.txHash, txo.index);
+            if(spender.compare("") != 0) {
+                txoObj["spender"] = spender;
+            } else {
+                txoObj["spender"] = nullptr;
+            }
+            j.push_back(txoObj);
         }
-        j.push_back(txoObj);
     }
 
     string body = j.dump();
