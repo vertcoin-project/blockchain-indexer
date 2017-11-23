@@ -32,4 +32,4 @@ services:
 networks:    
   default:
     external:
-      name: coin-middleware
+      name: blockchain-indexer

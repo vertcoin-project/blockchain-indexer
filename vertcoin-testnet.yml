@@ -11,7 +11,7 @@ services:
       - "15889:15889"
     volumes:
       - ./data/vtc/test/coind:/data
-    command: -rpcuser=middleware -rpcpassword=middleware -testnet -addnode=jlovejoy.mit.edu -addnode=gertjaap.ddns.net -txindex
+    command: -rpcuser=middleware -rpcpassword=middleware -testnet -txindex
 
   vtc-middleware-cpp-test:
     image: vtc-wallet-middleware
@@ -29,4 +29,4 @@ services:
 networks:    
   default:
     external:
-      name: coin-middleware
+      name: blockchain-indexer
