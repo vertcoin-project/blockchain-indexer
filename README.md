@@ -2,6 +2,10 @@
 
 https://blkidx.org/
 
+Pre-release warning
+----------------
+IMPORTANT: This software is still under active development. Do not depend on this for production situations.
+
 What is this?
 ----------------
 This project aims to be a independant blockchain indexer for Bitcoin-based blockchains. It can read the blockfiles directly and indexes these blocks to allow a number of queries via its built-in HTTP service:
