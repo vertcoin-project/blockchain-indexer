@@ -187,9 +187,9 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = this->scriptSolver->getAddressesFromScript(out.script);
-            if(addresses.size() == 0) { 
+            /*if(addresses.size() == 0) { 
                 cout << "No addresses found in txo " << tx.txHash << " / " << out.index << endl;
-            }
+            }*/
 
             if(addresses.size() > 1) {
                 if(scriptSolver->isMultiSig(out.script)) {
