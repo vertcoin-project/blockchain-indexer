@@ -144,6 +144,8 @@ string VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, v
     for(int i = 0; i < 4; i++) {
         ripeMD.push_back(doubleHashedRipeMD.at(i));
     }
+    cout << "RipeMD: " << hashToHex(ripeMD) << endl;
+
     string returnValue = base58(ripeMD);
     return returnValue;
 
@@ -172,7 +174,7 @@ static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnop
 std::string VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
 {
     unsigned char* pbegin = &in[0];
-    unsigned char* pend = &in[in.size()-1];
+    unsigned char* pend = &in[0] + in.size();
 
     // Skip & count leading zeroes.
     int zeroes = 0;
@@ -181,8 +183,11 @@ std::string VtcBlockIndexer::Utility::base58(vector<unsigned char> in)
         pbegin++;
         zeroes++;
     }
+
+
     // Allocate enough space in big-endian base58 representation.
-    int size = (pend - pbegin) * 138 / 100 + 1; // log(256) / log(58), rounded up.
+    int size = (in.size()-zeroes) * 138 / 100 + 1; // log(256) / log(58), rounded up.
+
     std::vector<unsigned char> b58(size);
     // Process the bytes.
     while (pbegin != pend) {

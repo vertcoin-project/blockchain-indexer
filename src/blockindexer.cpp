@@ -108,7 +108,7 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
 }
 
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
-    //cout << "Indexing block " << block.blockHash << " (Height " << block.height << ")" << endl;
+    cout << "Indexing block " << block.blockHash << " (Height " << block.height << ")" << endl;
     
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;
@@ -187,10 +187,6 @@ bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
 
         for(VtcBlockIndexer::TransactionOutput out : tx.outputs) {
             vector<string> addresses = this->scriptSolver->getAddressesFromScript(out.script);
-            /*if(addresses.size() == 0) { 
-                cout << "No addresses found in txo " << tx.txHash << " / " << out.index << endl;
-            }*/
-
             if(addresses.size() > 1) {
                 if(scriptSolver->isMultiSig(out.script)) {
                     stringstream txoMultiSigKey;
