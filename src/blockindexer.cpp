@@ -108,7 +108,7 @@ bool VtcBlockIndexer::BlockIndexer::hasIndexedBlock(string blockHash, int blockH
 }
 
 bool VtcBlockIndexer::BlockIndexer::indexBlock(Block block) {
-    cout << "Indexing block " << block.blockHash << " (Height " << block.height << ")" << endl;
+    //cout << "Indexing block " << block.blockHash << " (Height " << block.height << ")" << endl;
     
     stringstream ss;
     ss << "block-" << setw(8) << setfill('0') << block.height;

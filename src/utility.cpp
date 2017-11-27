@@ -144,8 +144,7 @@ string VtcBlockIndexer::Utility::ripeMD160ToAddress(unsigned char versionByte, v
     for(int i = 0; i < 4; i++) {
         ripeMD.push_back(doubleHashedRipeMD.at(i));
     }
-    cout << "RipeMD: " << hashToHex(ripeMD) << endl;
-
+   
     string returnValue = base58(ripeMD);
     return returnValue;
 
