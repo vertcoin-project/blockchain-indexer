@@ -377,7 +377,9 @@ void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > ses
     json j;
     j["error"] = false;
     const auto request = session->get_request( );
-
+    int raw = stoi(request->get_query_parameter("raw","0"));
+    int unconfirmed = stoi(request->get_query_parameter("unconfirmed","0"));
+    
     long long vout = stoll(request->get_path_parameter( "vout", "0" ));
     string txid = request->get_path_parameter("txid", "");
     stringstream txBlockKey;
@@ -399,13 +401,28 @@ void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > ses
         j["spent"] = s.ok();
         if(s.ok()) {
             j["spender"] = spentTx.substr(65, 64);
-        } else {
+        } else if(unconfirmed != 0) {
             string mempoolSpend = mempoolMonitor->outpointSpend(txid, vout);
             if(mempoolSpend.compare("") != 0) {
                 j["spent"] = true;
                 j["spender"] = mempoolSpend;
             }
         }
+
+        if(raw != 0 && j["spender"].is_string()) {
+            try {
+                const Json::Value tx = vertcoind->getrawtransaction(j["spender"].get<string>(), false);
+                j["spenderRaw"] = tx.asString();
+                j["spender"] = nullptr;
+            } catch(const jsonrpc::JsonRpcException& e) {
+                const std::string message(e.what());
+                cout << "Not found " << message << endl;
+            }
+        }
+
+
+
+
     }
    
     string body = j.dump();
@@ -419,8 +436,16 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
     const auto request = session->get_request( );
     size_t content_length = 0;
     content_length = request->get_header( "Content-Length", 0);
+    
+    
+    
     session->fetch( content_length, [ request, this ]( const shared_ptr< Session > session, const Bytes & body )
     {
+        const auto request = session->get_request( );
+        int raw = stoi(request->get_query_parameter("raw","0"));
+        int unconfirmed = stoi(request->get_query_parameter("unconfirmed","0"));
+        
+
         string content =string(body.begin(), body.end());
         json output = json::array();
         json input = json::parse(content);
@@ -450,7 +475,7 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
                         if(s.ok()) {
                             j["spender"] = spentTx.substr(65, 64);
                             j["spent"] = true;
-                        } else {
+                        } else if(unconfirmed != 0) {
                             string mempoolSpend = mempoolMonitor->outpointSpend( txo["txid"].get<string>(), txo["vout"].get<int>());
                             if(mempoolSpend.compare("") != 0) {
                                 json j;
@@ -459,6 +484,17 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
                             } else {
                                 j["spent"] = false;
                             }
+                        }
+                    }
+
+                    if(raw != 0 && j["spender"].is_string()) {
+                        try {
+                            const Json::Value tx = vertcoind->getrawtransaction(j["spender"].get<string>(), false);
+                            j["spenderRaw"] = tx.asString();
+                            j["spender"] = nullptr;
+                        } catch(const jsonrpc::JsonRpcException& e) {
+                            const std::string message(e.what());
+                            cout << "Not found " << message << endl;
                         }
                     }
 

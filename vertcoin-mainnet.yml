@@ -11,7 +11,7 @@ services:
       - "5889:5889"
     volumes:
       - ./data/vtc/main/coind:/data
-    command: -rpcuser=middleware -rpcpassword=middleware -txindex
+    command: -rpcuser=middleware -rpcpassword=middleware -rpcallowip=0.0.0.0/0 -rpcport=8332 -txindex
 
   vtc-middleware-cpp-main:
     image: vtc-wallet-middleware
