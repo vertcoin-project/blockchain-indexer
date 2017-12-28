@@ -273,7 +273,7 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
     int raw = stoi(request->get_query_parameter("raw","0"));
     int unspent = stoi(request->get_query_parameter("unspent","0"));
     int unconfirmed = stoi(request->get_query_parameter("unconfirmed","0"));
-    
+    int scripts = stoi(request->get_query_parameter("script","0"));
     cout << "Fetching address txos for address " << request->get_path_parameter( "address" ) << endl;
    
     string start(request->get_path_parameter( "address" ) + "-txo-00000001");
@@ -318,7 +318,22 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
                     txoObj["tx"] = tx.asString();
                 } catch(const jsonrpc::JsonRpcException& e) {
                     const std::string message(e.what());
+                    session->close(400, message, {{"Content-Type","text/plain"},{"Content-Length",  std::to_string(message.size())}});
                     cout << "Not found " << message << endl;
+                    return;
+                }
+            }
+
+            if(raw == 0 && scripts != 0) {
+                 try {
+                    const Json::Value tx = vertcoind->getrawtransaction(txo.substr(0,64), true);
+                    const Json::Value scriptHex = tx["vout"][stoi(txo.substr(64,8))]["scriptPubKey"]["hex"];
+                    txoObj["script"] = scriptHex.asString();
+                } catch(const jsonrpc::JsonRpcException& e) {
+                    const std::string message(e.what());
+                    session->close(400, message, {{"Content-Type","text/plain"},{"Content-Length",  std::to_string(message.size())}});
+                    cout << "Not found " << message << endl;
+                    return;
                 }
             }
 
@@ -330,7 +345,9 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
                     txoObj["spender"] = tx.asString();
                 } catch(const jsonrpc::JsonRpcException& e) {
                     const std::string message(e.what());
+                    session->close(400, message, {{"Content-Type","text/plain"},{"Content-Length",  std::to_string(message.size())}});
                     cout << "Not found " << message << endl;
+                    return;
                 }
             }
 
@@ -401,11 +418,20 @@ void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > ses
         j["spent"] = s.ok();
         if(s.ok()) {
             j["spender"] = spentTx.substr(65, 64);
+            
+            string blockHeightStr;
+            stringstream blockHashId;
+            blockHashId << "block-hash-" << spentTx.substr(0,64);
+            s = this->db->Get(leveldb::ReadOptions(), blockHashId.str(), &blockHeightStr);
+            if(s.ok()) {
+                j["height"] = stol(blockHeightStr);
+            }
         } else if(unconfirmed != 0) {
             string mempoolSpend = mempoolMonitor->outpointSpend(txid, vout);
             if(mempoolSpend.compare("") != 0) {
                 j["spent"] = true;
                 j["spender"] = mempoolSpend;
+                j["height"] = 0;
             }
         }
 
@@ -416,7 +442,9 @@ void VtcBlockIndexer::HttpServer::outpointSpend( const shared_ptr< Session > ses
                 j["spender"] = nullptr;
             } catch(const jsonrpc::JsonRpcException& e) {
                 const std::string message(e.what());
+                session->close(400, message, {{"Content-Type","text/plain"},{"Content-Length",  std::to_string(message.size())}});
                 cout << "Not found " << message << endl;
+                return;
             }
         }
 
@@ -475,12 +503,20 @@ void VtcBlockIndexer::HttpServer::outpointSpends( const shared_ptr< Session > se
                         if(s.ok()) {
                             j["spender"] = spentTx.substr(65, 64);
                             j["spent"] = true;
+                            string blockHeightStr;
+                            stringstream blockHashId;
+                            blockHashId << "block-hash-" << spentTx.substr(0,64);
+                            s = this->db->Get(leveldb::ReadOptions(), blockHashId.str(), &blockHeightStr);
+                            if(s.ok()) {
+                                j["height"] = stol(blockHeightStr);
+                            }   
                         } else if(unconfirmed != 0) {
                             string mempoolSpend = mempoolMonitor->outpointSpend( txo["txid"].get<string>(), txo["vout"].get<int>());
                             if(mempoolSpend.compare("") != 0) {
                                 json j;
                                 j["spender"] = mempoolSpend;
                                 j["spent"] = true;
+                                j["height"] = 0;
                             } else {
                                 j["spent"] = false;
                             }
