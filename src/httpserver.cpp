@@ -208,8 +208,12 @@ void VtcBlockIndexer::HttpServer::getBlocks(const shared_ptr<Session> session) {
 void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > session )
 {
     long long balance = 0;
+    long long unconfirmedBalance = 0;
+    long long txCount = 0;
+    long long unconfirmedTxCount = 0;
     int txoCount = 0;
     const auto request = session->get_request( );
+    int details = stoi(request->get_query_parameter("details","0"));
     
     cout << "Checking balance for address " << request->get_path_parameter( "address" ) << endl;
 
@@ -224,16 +228,22 @@ void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > se
 
         string spentTx;
         txoCount++;
+        txCount++;
         string txo = it->value().ToString();
 
         leveldb::Status s = this->db->Get(leveldb::ReadOptions(), "txo-" + txo.substr(0,64) + "-" + txo.substr(64,8) + "-spent", &spentTx);
         if(!s.ok()) // no key found, not spent. Add balance.
         {
+            balance += stoll(txo.substr(80));
             // check mempool for spenders
             string spender = mempoolMonitor->outpointSpend(txo.substr(0,64), stol(txo.substr(64,8)));
             if(spender.compare("") == 0) {
-                balance += stoll(txo.substr(80));
+                unconfirmedBalance += stoll(txo.substr(80));
+            } else {
+                unconfirmedTxCount++;
             }
+        } else { 
+            txCount++;
         }
     }
     assert(it->status().ok());  // Check for any errors found during the scan
@@ -245,20 +255,33 @@ void VtcBlockIndexer::HttpServer::addressBalance( const shared_ptr< Session > se
     vector<VtcBlockIndexer::TransactionOutput> mempoolOutputs = mempoolMonitor->getTxos(request->get_path_parameter( "address" ));
     for (VtcBlockIndexer::TransactionOutput txo : mempoolOutputs) {
         txoCount++;
+        unconfirmedTxCount++;
         string spender = mempoolMonitor->outpointSpend(txo.txHash, txo.index);
         cout << "Spender for " << txo.txHash << "/" << txo.index << " = " << spender;
         if(spender.compare("") == 0) {
-            balance += txo.value;
+            unconfirmedBalance += txo.value;
+        } else {
+            unconfirmedTxCount++;
         }
     }
 
     cout << "Including mempool: Analyzed " << txoCount << " TXOs - Balance is " << balance << endl;
     
-
-    stringstream body;
-    body << balance;
+    if(details != 0) {
+        json j;
+        j["balance"] = balance;
+        j["txCount"] = txCount;
+        j["unconfirmedBalance"] = unconfirmedBalance;
+        j["unconfirmedTxCount"] = unconfirmedTxCount;
+        string body = j.dump();
+        session->close( OK, body, { { "Content-Type",  "application/json" }, { "Content-Length",  std::to_string(body.size()) } } );
+    } else {
+        stringstream body;
+        body << balance;
+        
+        session->close( OK, body.str(), { {"Content-Type","text/plain"}, { "Content-Length",  std::to_string(body.str().size()) } } );
+    }
     
-    session->close( OK, body.str(), { {"Content-Type","text/plain"}, { "Content-Length",  std::to_string(body.str().size()) } } );
 }
 
 void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > session )
@@ -358,7 +381,12 @@ void VtcBlockIndexer::HttpServer::addressTxos( const shared_ptr< Session > sessi
                 txoObj["vout"] = stoll(txo.substr(64,8));
                 txoObj["value"] = stoll(txo.substr(80));
             }
-            
+            stringstream ssBlockTimeHeightKey;
+            string blockTimeStr;
+            ssBlockTimeHeightKey << "block-time-" << setw(8) << setfill('0') << block;
+            s = this->db->Get(leveldb::ReadOptions(), ssBlockTimeHeightKey.str(), &blockTimeStr);
+            txoObj["time"] = stoll(blockTimeStr);
+
             j.push_back(txoObj);
         }
     }
