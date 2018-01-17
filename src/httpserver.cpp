@@ -638,7 +638,8 @@ void VtcBlockIndexer::HttpServer::run()
     auto settings = make_shared< Settings >( );
     settings->set_port( 8888 );
     settings->set_default_header( "Connection", "close" );
-
+    settings->set_default_header( "Access-Control-Allow-Origin", "*" );
+    
     Service service;
     service.publish( addressBalanceResource );
     service.publish( addressTxosResource );
