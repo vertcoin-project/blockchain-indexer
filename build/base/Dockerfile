@@ -1,6 +1,8 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
-RUN apt-get update && apt install -y git wget build-essential libleveldb-dev cmake automake libssl-dev libtool autoconf libjsonrpccpp-dev libjsoncpp-dev libcurl4-openssl-dev
+RUN apt update
+RUN apt install tzdata
+RUN apt install -y git wget build-essential libleveldb-dev cmake automake libssl-dev libtool autoconf libjsonrpccpp-dev libjsoncpp-dev libcurl4-openssl-dev apt-utils
 
 RUN git clone --recursive https://github.com/Corvusoft/restbed
 RUN mkdir restbed/build
